@@ -13,6 +13,8 @@ import config
 config = config.get_3DReg_config()
 from torch.distributions.normal import Normal
 from dataset import BrainRSNADataset
+from time import time 
+
 
 class DoubleConv(nn.Module):
     """(convolution => [BN] => ReLU) * 2"""
@@ -47,6 +49,8 @@ class Down(nn.Module):
         return self.maxpool_conv(x) # each dim is halved
 
 class CNNEncoder(nn.Module):
+    # goal of this is to just extract features to make it easier for vit, we shouldnt fuse modalities through the cnn
+    # so we cant treat each modality as a channel as then it'll get prematurely fused
     def __init__(self, config, n_channels=1):
         # (B, 1, image_size, image_size, image_size)
         super(CNNEncoder, self).__init__()
@@ -74,16 +78,18 @@ class Embeddings(nn.Module):
         self.patch_embed = nn.Conv3d(config.encoder_channels[2], config.hidden_size, kernel_size=config.patches.grid, stride=config.patches.grid) # (B, hidden_size, (image_size / 4) / patches.grid[0], (image_size / 4) / patches.grid[1], (num_images / 4) / patches.grid[2])
         # look at above dim comment for patch embed for how this is calculated
         num_patches = (config.image_size / (2 ** config.down_factor * config.patches.grid[0])) * (config.image_size / (2 ** config.down_factor * config.patches.grid[1])) * (config.num_images / (2 ** config.down_factor * config.patches.grid[2])) 
+
         self.class_token = nn.Parameter(torch.zeros(1, 1, config.hidden_size))
         self.positional_embedding = nn.Parameter(torch.randn(1, int(num_patches + 1), config.hidden_size))
         self.dropout = Dropout(config.transformer["dropout_rate"])
     def forward(self, x):
-
+        # note for each modality self.positonal_embedding is the same 
         x = self.cnn_encoder(x)
         x = self.patch_embed(x)
 
         x = x.flatten(-3)
         x = x.transpose(-2, -1)
+
         x = torch.concat((self.class_token, x), dim=1)
         x = x + self.positional_embedding
         x = self.dropout(x)
@@ -218,7 +224,12 @@ class ViT(nn.Module):
         self.loss = nn.BCELoss
     def forward(self, x, label=None):
         # (B, 1, image_size, image_size, image_size)
-        x = self.embeddings(x)
+ 
+        cur = time()
+        # only use cls toke from first
+        x = torch.cat([self.embeddings(x.select(1, 0))] + [self.embeddings(x.select(1, i))[:, 1:, :] for i in range(1, x.shape[1])], dim=1)
+ 
+        print(time() - cur)
         x = self.encoder(x)
         # cls token
         x = x[:, 0, :]
@@ -235,17 +246,28 @@ class ViT(nn.Module):
 
 
 
-
+start = time()
 
 
 data = pd.read_csv("train_labels.csv")
 train_df, val_df = train_test_split(data, test_size=0.3, random_state=6969)
-train_dataset = BrainRSNADataset(data=train_df, mri_type='FLAIR', ds_type=f"train")
+
+train_dataset = BrainRSNADataset(data=train_df, ds_type=f"train")
 
 
-image = torch.tensor(np.expand_dims(train_dataset[0]['image'], 0))
+
+image = train_dataset[0]['image'].unsqueeze(0)
+# image = image.permute(1, 0, 2, 3, 4).view(1, 1024, 256, 64).unsqueeze(0)
+# image = image[0].unsqueeze(0)
+print(image.shape)
+# image = image.permute(1, 0, 2, 3, 4).reshape(1, 1024, 256, 64)
+
 
 
 
 a = ViT(config)
 print(a(image))
+# tensor = torch.randn(1, 5, 6)
+# print(tensor, tensor.view(1, 5, 2, 3), tensor.view(1, 5, 2, 3).contiguous().reshape(1, 2, 5, 3), sep='\n')
+# print(tensor.reshape(1, 2, 5, 3))
+# print(time() - start)

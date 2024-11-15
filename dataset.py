@@ -81,11 +81,11 @@ def extract_cropped_image_size(path):
     return resolution
 class BrainRSNADataset(Dataset):
     def __init__(
-        self, data, transform=None, target="MGMT_value", mri_type="FLAIR", is_train=True, ds_type="forgot", do_load=True
+        self, data, transform=None, target="MGMT_value", mri_types=("FLAIR", "T1w", "T1wCE", "T2w"), is_train=True, ds_type="forgot", do_load=True
     ):
         self.target = target
         self.data = data
-        self.type = mri_type
+        self.types = mri_types
 
         self.transform = transform
         self.is_train = is_train
@@ -97,9 +97,7 @@ class BrainRSNADataset(Dataset):
         self.img_indexes = self._prepare_biggest_images()
 
     def clean_data(self):
-    
-        invalid_ids = [case_id for case_id in self.data['BraTS21ID'] if not os.path.exists(f"{self.folder}/{case_id}/{self.type}")]
-        self.data = self.data[~self.data['BraTS21ID'].isin(invalid_ids)]
+        self.data = self.data[self.data['BraTS21ID'].apply(lambda case_id: all(os.path.exists(f"{self.folder}/{case_id}/{mri_type}") for mri_type in self.types))]
         
 
             
@@ -131,23 +129,24 @@ class BrainRSNADataset(Dataset):
         else:
             
             print("Calculating the best scans for every case...")
-            for row in tqdm(self.data.iterrows(), total=len(self.data)):
-                case_id = str(int(row[1].BraTS21ID)).zfill(5)
-                 
-                path = f"{self.folder}/{case_id}/{self.type}/*.dcm"
-                files = sorted(
-                    glob.glob(path),
-                    key=lambda var: [
-                        int(x) if x.isdigit() else x for x in re.findall(r"[^0-9]|[0-9]+", var)
-                    ],
-                )
-                
-                resolutions = [extract_cropped_image_size(f) for f in files]
-                if resolutions == [0] * len(resolutions):
-                    middle = len(resolutions) // 2
-                else:
-                    middle = np.array(resolutions).argmax()
-                big_image_indexes[case_id] = middle
+            for mri_type in self.types:
+                for row in tqdm(self.data.iterrows(), total=len(self.data)):
+                    case_id = str(int(row[1].BraTS21ID)).zfill(5)
+                    
+                    path = f"{self.folder}/{case_id}/{mri_type}/*.dcm"
+                    files = sorted(
+                        glob.glob(path),
+                        key=lambda var: [
+                            int(x) if x.isdigit() else x for x in re.findall(r"[^0-9]|[0-9]+", var)
+                        ],
+                    )
+                    
+                    resolutions = [extract_cropped_image_size(f) for f in files]
+                    if resolutions == [0] * len(resolutions):
+                        middle = len(resolutions) // 2
+                    else:
+                        middle = np.array(resolutions).argmax()
+                    big_image_indexes[(case_id, mri_type)] = middle
 
             joblib.dump(big_image_indexes, f"big_image_indexes_{self.ds_type}.pkl")
             return big_image_indexes
@@ -161,32 +160,34 @@ class BrainRSNADataset(Dataset):
         img_size=config.image_size,
         rotate=0,
     ):
+        data = []
         case_id = str(case_id).zfill(5)
+        for mri_type in self.types:
+            path = f"{self.folder}/{case_id}/{mri_type}/*.dcm"
+            files = sorted(
+                glob.glob(path),
+                key=lambda var: [
+                    int(x) if x.isdigit() else x for x in re.findall(r"[^0-9]|[0-9]+", var)
+                ],
+            )
 
-        path = f"{self.folder}/{case_id}/{self.type}/*.dcm"
-        files = sorted(
-            glob.glob(path),
-            key=lambda var: [
-                int(x) if x.isdigit() else x for x in re.findall(r"[^0-9]|[0-9]+", var)
-            ],
-        )
+            if self.is_train:
+                middle = self.img_indexes[(case_id, mri_type)]
+            else:
+                middle = len(files) // 2
+    
+            num_imgs2 = num_imgs // 2
+            p1 = max(0, middle - num_imgs2)
+            p2 = min(len(files), middle + num_imgs2)
+            image_stack = [load_dicom_image(f, rotate=rotate, voi_lut=True) for f in files[p1:p2]]
 
-        if self.is_train:
-            middle = self.img_indexes[case_id]
-        else:
-            middle = len(files) // 2
-   
-        num_imgs2 = num_imgs // 2
-        p1 = max(0, middle - num_imgs2)
-        p2 = min(len(files), middle + num_imgs2)
-        image_stack = [load_dicom_image(f, rotate=rotate, voi_lut=True) for f in files[p1:p2]]
-
-        img3d = np.stack(image_stack).T
-        if img3d.shape[-1] < num_imgs:
-            n_zero = np.zeros((img_size, img_size, num_imgs - img3d.shape[-1]))
-            img3d = np.concatenate((img3d, n_zero), axis=-1)
-
-        return np.expand_dims(img3d, 0)
+            img3d = np.stack(image_stack).T
+            if img3d.shape[-1] < num_imgs:
+                n_zero = np.zeros((img_size, img_size, num_imgs - img3d.shape[-1]))
+                img3d = np.concatenate((img3d, n_zero), axis=-1)
+            data.append(np.expand_dims(img3d, 0))
+        # channel
+        return np.array(data)
 
 
 
@@ -215,7 +216,11 @@ def load_dicom_image(path, img_size=config.image_size, voi_lut=True, rotate=0):
     return data
 
 
-# train_dataset = BrainRSNADataset(data=train_df, mri_type='FLAIR', ds_type=f"train")
+# data = pd.read_csv("train_labels.csv")
+# train_df, val_df = train_test_split(data, test_size=0.3, random_state=6969)
 
+# train_dataset = BrainRSNADataset(data=train_df, ds_type=f"train")
+# image = torch.tensor(np.expand_dims(train_dataset[0]['image'], 0))
+# print(train_dataset[0]['image'].shape)
 # valid_dataset = BrainRSNADataset(data=val_df, mri_type='FLAIR', ds_type=f"train")
 
