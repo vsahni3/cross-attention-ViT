@@ -1,0 +1,8 @@
+torch
+torchvision
+scipy
+monai
+scikit-learn
+ml-collections
+nibabel
+lightning

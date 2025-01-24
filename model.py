@@ -10,12 +10,16 @@ from torch.nn import Dropout, Softmax, Linear, Conv3d, LayerNorm
 from torch.nn.modules.utils import _pair, _triple
 import pandas as pd
 import config
-config = config.get_3DReg_config()
+config = config.get_mgmt_config()
 from torch.distributions.normal import Normal
-from dataset import BrainRSNADataset
+from dataset_ucsf import BrainDataset
 from time import time 
+import lightning as L
+from utils import compute_metrics
+from functools import reduce 
 
-
+# works with just cnn encoder and 2 linear layers
+# works with above + patch embed
 class DoubleConv(nn.Module):
     """(convolution => [BN] => ReLU) * 2"""
     
@@ -52,13 +56,14 @@ class CNNEncoder(nn.Module):
     # goal of this is to just extract features to make it easier for vit, we shouldnt fuse modalities through the cnn
     # so we cant treat each modality as a channel as then it'll get prematurely fused
     def __init__(self, config, n_channels=1):
-        # (B, 1, image_size, image_size, image_size)
+        # (B, 1, image_size, image_size, num_images)
         super(CNNEncoder, self).__init__()
         self.n_channels = n_channels
         encoder_channels = config.encoder_channels
         self.inc = DoubleConv(n_channels, encoder_channels[0])  # (B, encoder_channels[0], image_size, image_size, num_images)
         self.down1 = Down(encoder_channels[0], encoder_channels[1]) # (B, encoder_channels[1], image_size / 2, image_size / 2, num_images / 2)
         self.down2 = Down(encoder_channels[1], encoder_channels[2]) # (B, encoder_channels[2], image_size / 4, image_size / 4, num_images / 4)
+ 
 
     def forward(self, x):
         x = self.inc(x)
@@ -68,6 +73,7 @@ class CNNEncoder(nn.Module):
         x = self.down2(x)
 
         return x
+    
 
 
 class Embeddings(nn.Module):
@@ -77,7 +83,7 @@ class Embeddings(nn.Module):
         self.cnn_encoder = CNNEncoder(config, n_channels) # (B, encoder_channels[2], image_size / 4, image_size / 4, num_images / 4)
         self.patch_embed = nn.Conv3d(config.encoder_channels[2], config.hidden_size, kernel_size=config.patches.grid, stride=config.patches.grid) # (B, hidden_size, (image_size / 4) / patches.grid[0], (image_size / 4) / patches.grid[1], (num_images / 4) / patches.grid[2])
         # look at above dim comment for patch embed for how this is calculated
-        num_patches = (config.image_size / (2 ** config.down_factor * config.patches.grid[0])) * (config.image_size / (2 ** config.down_factor * config.patches.grid[1])) * (config.num_images / (2 ** config.down_factor * config.patches.grid[2])) 
+        num_patches = (config.img_size[0] / (2 ** config.down_factor * config.patches.grid[0])) * (config.img_size[1] / (2 ** config.down_factor * config.patches.grid[1])) * (config.img_size[2] / (2 ** config.down_factor * config.patches.grid[2])) 
 
         self.class_token = nn.Parameter(torch.zeros(1, 1, config.hidden_size))
         self.positional_embedding = nn.Parameter(torch.randn(1, int(num_patches + 1), config.hidden_size))
@@ -87,12 +93,13 @@ class Embeddings(nn.Module):
         x = self.cnn_encoder(x)
         x = self.patch_embed(x)
 
+
         x = x.flatten(-3)
         x = x.transpose(-2, -1)
-
-        x = torch.concat((self.class_token, x), dim=1)
+        class_token = self.class_token.expand(x.shape[0], -1, -1)
+        x = torch.concat((class_token, x), dim=1)
         x = x + self.positional_embedding
-        x = self.dropout(x)
+        # x = self.dropout(x)
 
         return x
 
@@ -105,13 +112,6 @@ class Mlp(nn.Module):
         self.act_fn = torch.nn.functional.gelu
         self.dropout = Dropout(config.transformer["dropout_rate"])
 
-        # self._init_weights()
-    # custom weight init
-    # def _init_weights(self):
-    #     nn.init.xavier_uniform_(self.fc1.weight)
-    #     nn.init.xavier_uniform_(self.fc2.weight)
-    #     nn.init.normal_(self.fc1.bias, std=1e-6)
-    #     nn.init.normal_(self.fc2.bias, std=1e-6)
 
     def forward(self, x):
         x = self.fc1(x)
@@ -188,7 +188,7 @@ class Block(nn.Module):
         self.ffn = Mlp(config)
 
     def forward(self, x):
-        # pre norm - residual unnroamilzied straightforward gradient, inputs normalized before going into layer
+        # pre norm - residual unnoramilzied straightforward gradient, inputs normalized before going into layer
         old_x = x
         x = self.attention_norm(x)
         x = self.multi_head(x)
@@ -206,6 +206,7 @@ class Encoder(nn.Module):
         super(Encoder, self).__init__()
         self.encoder_norm = LayerNorm(config.hidden_size, eps=1e-6)
         self.layers = nn.Sequential(*[copy.deepcopy(Block(config)) for _ in range(config.transformer["num_layers"])])
+
     
     def forward(self, x):
         x = self.layers(x)
@@ -213,60 +214,148 @@ class Encoder(nn.Module):
         return x
 
 
-class ViT(nn.Module):
+class ViT(L.LightningModule):
     def __init__(self, config):
         super(ViT, self).__init__()
         self.embeddings = Embeddings(config)
         self.encoder = Encoder(config)
         # (B, seq_size, embed_dim)
-        self.final = Linear(config.hidden_size, 1)
-        self.act_fn = torch.nn.functional.sigmoid 
-        self.loss = nn.BCELoss
+        self.final = Linear(128, 1)
+        # self.a = Linear(32, 1)
+
+        self._init_weights()
+        # self.model = nn.Sequential(
+        #     nn.Conv3d(in_channels=1, out_channels=16, kernel_size=3, stride=1, padding=1),  # Conv layer
+        #     nn.ReLU(),  # Activation
+        #     nn.MaxPool3d(kernel_size=2, stride=2),  # Downsampling
+        #     nn.Conv3d(in_channels=16, out_channels=32, kernel_size=3, stride=1, padding=1),  # Another Conv layer
+        #     nn.ReLU(),
+        #     nn.MaxPool3d(kernel_size=2, stride=2),
+        #     nn.Flatten(),  # Flatten before dense layers
+        #     nn.Linear(32 * 32 * 32 * 32, 128),  # Fully connected layer
+        #     nn.ReLU(),
+        #     nn.Linear(128, 1)  # Output layer
+        # )
+        self.loss = torch.nn.BCEWithLogitsLoss()
+
+    def _init_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv3d):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+                if m.bias is not None:
+                    nn.init.constant_(m.bias, 0)
+            elif isinstance(m, nn.Linear):
+                nn.init.xavier_normal_(m.weight)
+                if m.bias is not None:
+                    nn.init.constant_(m.bias, 0)
+
+
     def forward(self, x, label=None):
-        # (B, 1, image_size, image_size, image_size)
- 
-        cur = time()
+        
+        # (B, num_modalities, 1, image_size, image_size, num_images)
+        # print(torch.sum(torch.abs(x[0] - x[1])), 'FIRST', torch.sum(torch.abs(x[0] - x[1])) / reduce(lambda x, y: x * y, x.shape[1:]))
         # only use cls toke from first
         x = torch.cat([self.embeddings(x.select(1, 0))] + [self.embeddings(x.select(1, i))[:, 1:, :] for i in range(1, x.shape[1])], dim=1)
- 
-        print(time() - cur)
+        # x = x.squeeze(1)
+        
+        # x = x.flatten(1)
+   
+
+
+
+        # print(torch.sum(torch.abs(x[0] - x[1])), 'SECOND', torch.sum(torch.abs(x[0] - x[1])) / reduce(lambda x, y: x * y, x.shape[1:]))
         x = self.encoder(x)
+        # print(torch.sum(torch.abs(x[0] - x[1])), 'THIRD', torch.sum(torch.abs(x[0] - x[1])) / reduce(lambda x, y: x * y, x.shape[1:]))
         # cls token
         x = x[:, 0, :]
-        x = self.act_fn(self.final(x))
+        # print(torch.sum(torch.abs(x[0] - x[1])), 'FOURTH', torch.sum(torch.abs(x[0] - x[1])) / reduce(lambda x, y: x * y, x.shape[1:]))
+    
+        
+        # x = self.a(torch.relu(self.final(x))).squeeze(-1)
+        x = self.final(x).squeeze(-1)
+        # x = self.model(x).squeeze(-1)
+
+        # print(x, label, 'AHHHHH')
+
+
         if label is None:
             return x 
+
+        
+
         return x, self.loss(x, label)
 
 
 
 
+    def training_step(self, batch, batch_idx):
+        x, labels = batch
+
+        prob, loss = self(x, labels)
+        print(loss)
+        self.log('train_loss', loss, on_epoch=True, sync_dist=True)
+        metrics = compute_metrics(prob, labels)
+        self.log('train_acc', metrics['accuracy'], on_epoch=True, sync_dist=True)
+        self.log('train_prec', metrics['precision'], on_epoch=True, sync_dist=True)
+        self.log('train_rec', metrics['recall'], on_epoch=True, sync_dist=True)
+        self.log('train_spec', metrics['specificity'], on_epoch=True, sync_dist=True)
+        self.log('train_f1', metrics['f1_score'], on_epoch=True, sync_dist=True)
+
+    
+        return loss
+
+    def validation_step(self, batch, batch_idx):
+        x, labels = batch
+        prob, loss = self(x, labels)
+
+        self.log('val_loss', loss, on_epoch=True, sync_dist=True)
+
+        # metrics = compute_metrics(prob, labels)
+        # self.log('val_acc', metrics['accuracy'], on_epoch=True, sync_dist=True)
+        # self.log('val_prec', metrics['precision'], on_epoch=True, sync_dist=True)
+        # self.log('val_rec', metrics['recall'], on_epoch=True, sync_dist=True)
+        # self.log('val_spec', metrics['specificity'], on_epoch=True, sync_dist=True)
+        # self.log('val_f1', metrics['f1_score'], on_epoch=True, sync_dist=True)
 
 
 
-
-
-start = time()
-
-
-data = pd.read_csv("train_labels.csv")
-train_df, val_df = train_test_split(data, test_size=0.3, random_state=6969)
-
-train_dataset = BrainRSNADataset(data=train_df, ds_type=f"train")
-
-
-
-image = train_dataset[0]['image'].unsqueeze(0)
-# image = image.permute(1, 0, 2, 3, 4).view(1, 1024, 256, 64).unsqueeze(0)
-# image = image[0].unsqueeze(0)
-print(image.shape)
-# image = image.permute(1, 0, 2, 3, 4).reshape(1, 1024, 256, 64)
+    def configure_optimizers(self):
+        optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer, mode="min", factor=0.1, patience=5
+        )
+        
+        return {
+            "optimizer": optimizer,
+            "lr_scheduler": {
+                "scheduler": scheduler,
+                "monitor": "val_loss",
+            },
+        }
 
 
 
+data = pd.read_csv("labels.csv")
+train_df, tmp_df = train_test_split(data, test_size=0.3, random_state=6969)
+val_df, test_df = train_test_split(tmp_df, test_size=0.5, random_state=6969)
 
-a = ViT(config)
-print(a(image))
+train_dataset = BrainDataset(data=train_df, is_train=True)
+val_dataset = BrainDataset(data=val_df, is_train=False)
+test_dataset = BrainDataset(data=test_df, is_train=False)
+
+
+# from time import time 
+# start = time()
+
+# image1 = train_dataset[0][0]
+# image2 = train_dataset[1][0]
+# print(torch.sum(torch.abs(image1 - image2)))
+# # print(image.shape)
+# image = torch.stack((image1, image2))
+# print(image.shape)
+# a = ViT(config)
+# print(a(image, torch.tensor([1.0])))
+# print(time() - start)
 # tensor = torch.randn(1, 5, 6)
 # print(tensor, tensor.view(1, 5, 2, 3), tensor.view(1, 5, 2, 3).contiguous().reshape(1, 2, 5, 3), sep='\n')
 # print(tensor.reshape(1, 2, 5, 3))

@@ -1,20 +1,20 @@
 import ml_collections
 
-def get_3DReg_config():
+def get_mgmt_config():
     config = ml_collections.ConfigDict()
-    config.patches = ml_collections.ConfigDict({'size': (8, 8, 2)})
-    config.patches.grid = (8, 8, 2)
-    config.hidden_size = 64
+    config.patches = ml_collections.ConfigDict({'size': (4, 4, 4)})
+    config.patches.grid = (4, 4, 4)
+    config.hidden_size = 128
     config.transformer = ml_collections.ConfigDict()
-    config.transformer.mlp_dim = 256
+    config.transformer.mlp_dim = 512
     config.transformer.num_heads = 8
-    config.transformer.num_layers = 12
+    config.transformer.num_layers = 36
     config.transformer.attention_dropout_rate = 0.0
-    config.transformer.dropout_rate = 0.1
-    config.patch_size = 8
+    config.transformer.dropout_rate = 0.0
+    config.patch_size = 4
 
     config.conv_first_channel = 512
-    config.encoder_channels = (16, 32, 32)
+    config.encoder_channels = (16, 32, 64)
     config.down_factor = 2
     config.down_num = 2
     config.decoder_channels = (96, 48, 32, 32, 16)
@@ -22,6 +22,8 @@ def get_3DReg_config():
     config.n_dims = 3
     config.n_skip = 5
 
-    config.num_images = 64
-    config.image_size = 256 
+    config.img_size = (128, 128, 128)
+    config.spacing = (2, 2, 2)
+
+    config.target = "MGMT status"
     return config
