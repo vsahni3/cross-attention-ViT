@@ -74,7 +74,7 @@ config = config.get_mgmt_config()
 # # Maybe not your case.
 
 class BrainDataset(Dataset):
-    def __init__(self, data, target=config.target, types=("T2",), is_train=True, folder='ucsf-data'):
+    def __init__(self, data, target=config.target, types=("T1c",), is_train=True, folder='ucsf-data'):
         self.target = target
         self.data = data
         self.types = types
@@ -145,7 +145,7 @@ def clean_data(data, target):
     pattern = '|'.join(to_drop)
     data = data[~data['ID'].str.contains(pattern)]
     data.loc[:, 'ID'] = data['ID'].apply(lambda x: '-'.join([*x.split('-')[:-1], x.split('-')[-1].zfill(4)]))
-
+    
     data = data[~((data[target] == 'indeterminate') | (data[target].isna()))]
     data[target] = (data[target] == 'positive').astype(float)
     return data

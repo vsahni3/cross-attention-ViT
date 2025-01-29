@@ -1,4 +1,5 @@
 from dataset_ucsf import BrainDataset, clean_data
+from dataset import BrainRSNADataset
 from modelv2 import ViT3D
 from torch.utils.data import DataLoader, random_split, WeightedRandomSampler
 import torch
@@ -14,7 +15,7 @@ from monai.networks.nets import DenseNet121
 from sklearn.model_selection import train_test_split
 import torch.nn as nn
 from modify_model import get_model_upto_layer
-
+from collections import namedtuple
 
 
 
@@ -25,8 +26,8 @@ config = config.get_mgmt_config()
 # Callbacks
 checkpoint_callback = ModelCheckpoint(
    dirpath="checkpoints",
-   monitor="val_loss",
-   filename="vit-{epoch:02d}-{val_loss:.2f}-{val_acc:.2f}",
+   monitor="train_loss",
+   filename="vit-{epoch:02d}",
    save_top_k=3,
    mode="min",
 )
@@ -103,57 +104,106 @@ def reset_weights(m):
 # Instantiate the model
 
 # model.apply(reset_weights)
-
-logger = TensorBoardLogger(save_dir="lightning_logs", name="vit_model")
-# Model
-# model = ViT(config)
-model = ViT3D(
-    in_channels=1,
-    hidden_dim=64,
-    num_heads=8,
-    num_layers=12,
-    num_classes=2, 
-    img_size=(128, 128, 128),
-    add_cls_token=False,
-    dropout=0.0
-)
-
-# Dataset
-data = pd.read_csv("labels.csv")
-data = clean_data(data, config.target)
+Params = namedtuple("Params", ["lr", "drop", "sched_type", "patience", "factor", "weight_decay", "img_types"])
 
 
-train_df, tmp_df = train_test_split(data, test_size=0.3, random_state=6969)
-# train_df = train_df.iloc[:3]
-num_negative = len(train_df[train_df[config.target] == 0])
-num_positive = len(train_df) - num_negative
+params_list = [
+    Params(lr=1e-4, drop=0.1, sched_type='train_loss', patience=25, factor=0.05, weight_decay=1e-3, img_types=("T1c",))
+    # Params(lr=0.00005, drop=0.0, sched_type='val_loss', patience=25, factor=0.05, weight_decay=0.0),
+    # Params(lr=0.0001, drop=0.1, sched_type='train_loss', patience=25, factor=0.05, weight_decay=0.0),
+]
 
-# neg must be first cuz of indexing by label
-class_counts = [num_negative, num_positive]
-class_weights = 1. / torch.tensor(class_counts, dtype=torch.float)
-sample_weights = [class_weights[int(label)] for label in train_df[config.target]]
-sampler = WeightedRandomSampler(weights=sample_weights, num_samples=len(sample_weights), replacement=True)
+legend = 'lr drop val_or_train_sched patience factor weight_decay shape img'
+for params in params_list:
+    params_title = f'{params.lr} {params.drop} {params.sched_type} {params.patience} {params.factor} {params.weight_decay} (128, 128, 64) t1c'
+    logger = TensorBoardLogger(save_dir="lightning_logs", name=f"vit_model_{params_title}")
+    # Model
+    # model = ViT(config)
+    model = ViT3D(
+        config=config,
+        num_classes=2, 
+        add_cls_token=True,
+        dropout=params.drop,
+        lr=params.lr,
+        weight_decay=params.weight_decay,
+        optimizer_params={
+            'type': params.sched_type,
+            'patience': params.patience,
+            'factor': params.factor
+        }
+    )
 
-val_df, test_df = train_test_split(tmp_df, test_size=0.5, random_state=6969)
-# val_df = val_df.iloc[:3]
-
-train_dataset = BrainDataset(data=train_df, is_train=True)
-val_dataset = BrainDataset(data=val_df, is_train=False)
-test_dataset = BrainDataset(data=test_df, is_train=False)
-
-
+    # Dataset
+    # train = [2, 64, 172, 271]
+    # val = [383, 481]
+    # data = pd.read_csv("temp/train_labels.csv")
+    # train_df = data[data['BraTS21ID'].isin(train)]
+    # val_df = data[data['BraTS21ID'].isin(val)]
 
 
-train_loader = DataLoader(train_dataset, batch_size=5, num_workers=5, sampler=sampler)
-val_loader = DataLoader(val_dataset, batch_size=5, shuffle=False, num_workers=5)
-test_loader = DataLoader(test_dataset, batch_size=12, shuffle=False, num_workers=5)
+    data = pd.read_csv("labels.csv")
+    data = clean_data(data, config.target)
+    # train_dataset = BrainRSNADataset(data=train_df, is_train=True, mri_types=("T1w",))
+    # val_dataset = BrainRSNADataset(data=val_df, is_train=False, mri_types=("T1w",))
+
+    # train_loader = DataLoader(train_dataset, batch_size=5, num_workers=5)
+    # val_loader = DataLoader(val_dataset, batch_size=5, shuffle=False, num_workers=5)
+
+    train_df, tmp_df = train_test_split(data, test_size=0.3, random_state=6969)
+
+    # train_df = train_df.iloc[:3]
+
+    num_negative = len(train_df[train_df[config.target] == 0])
+    num_positive = len(train_df) - num_negative
+
+    # neg must be first cuz of indexing by label
+    class_counts = [num_negative, num_positive]
+    class_weights = 1. / torch.tensor(class_counts, dtype=torch.float)
+    sample_weights = [class_weights[int(label)] for label in train_df[config.target]]
+    sampler = WeightedRandomSampler(weights=sample_weights, num_samples=len(sample_weights), replacement=True)
+
+    val_df, test_df = train_test_split(tmp_df, test_size=0.5, random_state=6969)
+    # val_df = val_df.iloc[:3]
+
+    train_dataset = BrainDataset(data=train_df, is_train=True, types=params.img_types)
+    val_dataset = BrainDataset(data=val_df, is_train=False, types=params.img_types)
+    # test_dataset = BrainDataset(data=test_df, is_train=False)
 
 
-trainer = L.Trainer(
-max_epochs=100,
-logger=logger,
-accelerator="auto",
-devices=2,
-callbacks=[checkpoint_callback]
-)
-trainer.fit(model, train_loader, val_loader)
+
+
+    train_loader = DataLoader(train_dataset, batch_size=5, num_workers=5, sampler=sampler)
+    val_loader = DataLoader(val_dataset, batch_size=5, shuffle=False, num_workers=5)
+    # test_loader = DataLoader(test_dataset, batch_size=12, shuffle=False, num_workers=5)
+
+    torch.cuda.empty_cache()
+    trainer = L.Trainer(
+    max_epochs=150,
+    logger=logger,
+    accelerator="auto",
+    devices=2,
+    callbacks=[checkpoint_callback]
+    )
+    trainer.fit(model, train_loader, val_loader)
+
+
+
+
+
+# model = ViT3D(
+    #     in_channels=1,
+    #     hidden_dim=64,
+    #     num_heads=8,
+    #     num_layers=12,
+    #     num_classes=2, 
+    #     img_size=(128, 128, 64),
+    #     add_cls_token=True,
+    #     dropout=params.drop,
+    #     lr=params.lr,
+    #     weight_decay=params.weight_decay,
+    #     optimizer_params={
+    #         'type': params.sched_type,
+    #         'patience': params.patience,
+    #         'factor': params.factor
+    #     }
+    # )

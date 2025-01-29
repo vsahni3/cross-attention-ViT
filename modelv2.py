@@ -5,7 +5,7 @@ import lightning as L
 from utils import compute_metrics
 from monai.networks.nets import DenseNet121
 from modify_model import get_model_upto_layer
-
+import ml_collections
 class CNN3DEncoder(nn.Module):
     """
     A simple 3D CNN that encodes a 3D volume into a smaller feature map.
@@ -93,15 +93,14 @@ def reset_weights(m):
 
 class ViT3D(L.LightningModule):
     def __init__(self, 
-                 in_channels: int = 1,
-                 hidden_dim: int = 64,
-                 num_heads: int = 8,
-                 num_layers: int = 12,
-                 num_classes: int = 2,    # for classification
+                 optimizer_params: dict,
+                 lr: float,
+                 weight_decay: float,
+                 config: ml_collections.ConfigDict,
+                 num_classes: int = 2,
                  add_cls_token: bool = True,
-                 img_size: tuple = (128, 128, 128),
-                 pretrained_cnn : bool = True,
-                 cnn_out_dim : tuple = (64, 8, 8, 8),
+                 pretrained_cnn: bool = False,
+                 cnn_out_dim: tuple = (64, 8, 8, 8),
                  dropout: float = 0.0,
                  growth_rate: int = 16):
         """
@@ -115,7 +114,9 @@ class ViT3D(L.LightningModule):
             add_cls_token: Whether to prepend a [CLS] token for classification.
         """
         super().__init__()
-        
+        self.lr = lr
+        self.optimizer_params = optimizer_params
+        self.weight_decay = weight_decay
         if pretrained_cnn:
             raw_model = DenseNet121(
                 spatial_dims=3,  
@@ -127,12 +128,12 @@ class ViT3D(L.LightningModule):
             raw_model.apply(reset_weights)
             self.encoder_3d = get_model_upto_layer(raw_model, "features.denseblock3.denselayer24.layers.conv1")
         else:
-            self.encoder_3d = CNN3DEncoder(hidden_dim=hidden_dim)
+            self.encoder_3d = CNN3DEncoder(hidden_dim=config.hidden_dim)
         
         # 2. [CLS] token
         self.add_cls_token = add_cls_token
         if add_cls_token:
-            self.cls_token = nn.Parameter(torch.zeros(1, 1, hidden_dim))
+            self.cls_token = nn.Parameter(torch.zeros(1, 1, config.hidden_dim))
         else:
             self.cls_token = None
 
@@ -142,21 +143,21 @@ class ViT3D(L.LightningModule):
         if pretrained_cnn:
             num_tokens = cnn_out_dim[1] * cnn_out_dim[2] * cnn_out_dim[3]
         else:
-            D, H, W = img_size
+            D, H, W = config.img_size
             num_tokens = (D // 8) * (H // 8) * (W // 8)
-        self.pos_embed = nn.Parameter(torch.zeros(1, num_tokens + int(add_cls_token), hidden_dim))
+        self.pos_embed = nn.Parameter(torch.zeros(1, num_tokens + int(add_cls_token), config.hidden_dim))
         
         # 3. Transformer encoder
-        self.transformer = TransformerEncoder(embed_dim=hidden_dim,
-                                              num_heads=num_heads,
-                                              num_layers=num_layers,
+        self.transformer = TransformerEncoder(embed_dim=config.hidden_dim,
+                                              num_heads=config.transformer.num_heads,
+                                              num_layers=config.transformer.num_layers,
                                               dropout=dropout)
         
         # 4. Classification head
         self.mlp_head = nn.Sequential(
-            nn.LayerNorm(hidden_dim),
-            nn.Linear(hidden_dim, hidden_dim // 4),
-            nn.Linear(hidden_dim // 4, num_classes),
+            nn.LayerNorm(config.hidden_dim),
+            nn.Linear(config.hidden_dim, config.hidden_dim // 4),
+            nn.Linear(config.hidden_dim // 4, num_classes),
         )
         
         # Initialize parameters
@@ -224,15 +225,15 @@ class ViT3D(L.LightningModule):
         x, labels = batch
 
         prob, loss = self(x, labels)
-        self.log('train_loss', loss, on_epoch=True, sync_dist=True)
+        self.log('train_loss', loss, on_epoch=True, on_step=False, sync_dist=True)
         prob = torch.argmax(prob, dim=1)
 
         metrics = compute_metrics(prob, labels)
-        self.log('train_acc', metrics['accuracy'], on_epoch=True, sync_dist=True)
-        self.log('train_prec', metrics['precision'], on_epoch=True, sync_dist=True)
-        self.log('train_rec', metrics['recall'], on_epoch=True, sync_dist=True)
-        self.log('train_spec', metrics['specificity'], on_epoch=True, sync_dist=True)
-        self.log('train_f1', metrics['f1_score'], on_epoch=True, sync_dist=True)
+        self.log('train_acc', metrics['accuracy'], on_epoch=True, on_step=False, sync_dist=True)
+        self.log('train_prec', metrics['precision'], on_epoch=True, on_step=False, sync_dist=True)
+        self.log('train_rec', metrics['recall'], on_epoch=True, on_step=False, sync_dist=True)
+        self.log('train_spec', metrics['specificity'], on_epoch=True, on_step=False, sync_dist=True)
+        self.log('train_f1', metrics['f1_score'], on_epoch=True, on_step=False, sync_dist=True)
 
     
         return loss
@@ -241,27 +242,27 @@ class ViT3D(L.LightningModule):
         x, labels = batch
         prob, loss = self(x, labels)
 
-        self.log('val_loss', loss, on_epoch=True, sync_dist=True)
-
-        # metrics = compute_metrics(prob, labels)
-        # self.log('val_acc', metrics['accuracy'], on_epoch=True, sync_dist=True)
-        # self.log('val_prec', metrics['precision'], on_epoch=True, sync_dist=True)
-        # self.log('val_rec', metrics['recall'], on_epoch=True, sync_dist=True)
-        # self.log('val_spec', metrics['specificity'], on_epoch=True, sync_dist=True)
-        # self.log('val_f1', metrics['f1_score'], on_epoch=True, sync_dist=True)
+        self.log('val_loss', loss, on_epoch=True, on_step=False, sync_dist=True)
+        prob = torch.argmax(prob, dim=1)
+        metrics = compute_metrics(prob, labels)
+        self.log('val_acc', metrics['accuracy'], on_epoch=True, on_step=False, sync_dist=True)
+        self.log('val_prec', metrics['precision'], on_epoch=True, on_step=False, sync_dist=True)
+        self.log('val_rec', metrics['recall'], on_epoch=True, on_step=False, sync_dist=True)
+        self.log('val_spec', metrics['specificity'], on_epoch=True, on_step=False, sync_dist=True)
+        self.log('val_f1', metrics['f1_score'], on_epoch=True, on_step=False, sync_dist=True)
 
 
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
+        optimizer = torch.optim.Adam(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer, mode="min", factor=0.1, patience=5
+            optimizer, mode="min", factor=self.optimizer_params['factor'], patience=self.optimizer_params['patience']
         )
         
         return {
             "optimizer": optimizer,
             "lr_scheduler": {
                 "scheduler": scheduler,
-                "monitor": "val_loss",
+                "monitor": self.optimizer_params['type']
             },
         }

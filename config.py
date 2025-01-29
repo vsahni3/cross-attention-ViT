@@ -4,11 +4,11 @@ def get_mgmt_config():
     config = ml_collections.ConfigDict()
     config.patches = ml_collections.ConfigDict({'size': (4, 4, 4)})
     config.patches.grid = (4, 4, 4)
-    config.hidden_size = 128
+    config.hidden_dim = 64
     config.transformer = ml_collections.ConfigDict()
     config.transformer.mlp_dim = 512
     config.transformer.num_heads = 8
-    config.transformer.num_layers = 36
+    config.transformer.num_layers = 12
     config.transformer.attention_dropout_rate = 0.0
     config.transformer.dropout_rate = 0.0
     config.patch_size = 4
@@ -22,7 +22,8 @@ def get_mgmt_config():
     config.n_dims = 3
     config.n_skip = 5
 
-    config.img_size = (128, 128, 128)
+    config.img_size = (128, 128, 64)
+    config.in_channels = 1
     config.spacing = (2, 2, 2)
 
     config.target = "MGMT status"
