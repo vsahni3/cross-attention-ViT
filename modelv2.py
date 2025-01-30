@@ -6,6 +6,7 @@ from utils import compute_metrics
 from monai.networks.nets import DenseNet121
 from modify_model import get_model_upto_layer
 import ml_collections
+import torchmetrics
 class CNN3DEncoder(nn.Module):
     """
     A simple 3D CNN that encodes a 3D volume into a smaller feature map.
@@ -225,35 +226,39 @@ class ViT3D(L.LightningModule):
         loss = F.cross_entropy(logits, labels)
         return logits, loss
 
+    def log_stats(self, is_train, logits, labels):
+        name = 'train' if is_train else 'val'
+        pred = torch.argmax(logits, dim=1)
+        metrics = compute_metrics(pred, labels)
+        self.log(f'{name}_acc', metrics['accuracy'], on_epoch=True, on_step=False, sync_dist=True)
+        self.log(f'{name}_prec', metrics['precision'], on_epoch=True, on_step=False, sync_dist=True)
+        self.log(f'{name}_rec', metrics['recall'], on_epoch=True, on_step=False, sync_dist=True)
+        self.log(f'{name}_spec', metrics['specificity'], on_epoch=True, on_step=False, sync_dist=True)
+        self.log(f'{name}_f1', metrics['f1_score'], on_epoch=True, on_step=False, sync_dist=True)
+
+        prob = torch.nn.functional.softmax(logits, dim=1)[:, 1]
+        auroc = torchmetrics.functional.auroc(prob, labels, task="binary")
+        self.log(f'{name}_auc_roc', auroc, on_epoch=True, on_step=False, sync_dist=True)
+
+
+
+
     def training_step(self, batch, batch_idx):
         x, labels = batch
 
-        prob, loss = self(x, labels)
+        logits, loss = self(x, labels)
         self.log('train_loss', loss, on_epoch=True, on_step=False, sync_dist=True)
-        prob = torch.argmax(prob, dim=1)
-
-        metrics = compute_metrics(prob, labels)
-        self.log('train_acc', metrics['accuracy'], on_epoch=True, on_step=False, sync_dist=True)
-        self.log('train_prec', metrics['precision'], on_epoch=True, on_step=False, sync_dist=True)
-        self.log('train_rec', metrics['recall'], on_epoch=True, on_step=False, sync_dist=True)
-        self.log('train_spec', metrics['specificity'], on_epoch=True, on_step=False, sync_dist=True)
-        self.log('train_f1', metrics['f1_score'], on_epoch=True, on_step=False, sync_dist=True)
-
-    
+        self.log_stats(True, logits, labels)
         return loss
 
     def validation_step(self, batch, batch_idx):
         x, labels = batch
-        prob, loss = self(x, labels)
+        logits, loss = self(x, labels)
 
         self.log('val_loss', loss, on_epoch=True, on_step=False, sync_dist=True)
-        prob = torch.argmax(prob, dim=1)
-        metrics = compute_metrics(prob, labels)
-        self.log('val_acc', metrics['accuracy'], on_epoch=True, on_step=False, sync_dist=True)
-        self.log('val_prec', metrics['precision'], on_epoch=True, on_step=False, sync_dist=True)
-        self.log('val_rec', metrics['recall'], on_epoch=True, on_step=False, sync_dist=True)
-        self.log('val_spec', metrics['specificity'], on_epoch=True, on_step=False, sync_dist=True)
-        self.log('val_f1', metrics['f1_score'], on_epoch=True, on_step=False, sync_dist=True)
+        self.log_stats(False, logits, labels)
+
+        
 
 
 
