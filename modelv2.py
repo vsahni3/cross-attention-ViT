@@ -55,10 +55,10 @@ class TransformerEncoder(nn.Module):
     A simple wrapper around nn.TransformerEncoder to process a sequence of tokens.
     """
     def __init__(self, 
-                 embed_dim: int = 128, 
-                 num_heads: int = 8, 
-                 num_layers: int = 6, 
-                 dropout: float = 0.1):
+                 embed_dim: int, 
+                 num_heads: int, 
+                 num_layers: int, 
+                 dropout: float):
         super().__init__()
         encoder_layer = nn.TransformerEncoderLayer(
             d_model=embed_dim, 
@@ -144,7 +144,7 @@ class ViT3D(L.LightningModule):
             num_tokens = cnn_out_dim[1] * cnn_out_dim[2] * cnn_out_dim[3]
         else:
             D, H, W = config.img_size
-            num_tokens = (D // 8) * (H // 8) * (W // 8)
+            num_tokens = (D // 8) * (H // 8) * (W // 8) * config.num_modalities
         self.pos_embed = nn.Parameter(torch.zeros(1, num_tokens + int(add_cls_token), config.hidden_dim))
         
         # 3. Transformer encoder
@@ -180,16 +180,20 @@ class ViT3D(L.LightningModule):
         Returns:
             logits: shape (B, num_classes)
         """
-        x = x.squeeze(1)
         # 1. Pass through the 3D CNN encoder
         #    Output shape: (B, hidden_dim, D', H', W')
-        x = self.encoder_3d(x)
-        
-        B, C, Dp, Hp, Wp = x.shape  # e.g. B, 128, D/8, H/8, W/8
-        
-        # 2. Flatten spatial dims => sequence of tokens
-        #    shape after flatten: (B, C, D'*H'*W')
-        x = x.flatten(start_dim=2)  # (B, C, N), N = D'*H'*W'
+        all_tokens = []
+        for modality in range(x.shape[1]):
+            cur_x = self.encoder_3d(x.select(1, modality))
+            
+            
+            B, C, Dp, Hp, Wp = cur_x.shape  # e.g. B, 128, D/8, H/8, W/8
+            
+            # 2. Flatten spatial dims => sequence of tokens
+            #    shape after flatten: (B, C, D'*H'*W')
+            cur_x = cur_x.flatten(start_dim=2)  # (B, C, N), N = D'*H'*W'
+            all_tokens.append(cur_x)
+        x = torch.cat(all_tokens, dim=2)
         
         #    transpose to get (B, N, C)
         x = x.transpose(1, 2)  # (B, N, C)
