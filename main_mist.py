@@ -105,14 +105,14 @@ Params = namedtuple("Params", ["lr", "drop", "sched_type", "patience", "factor",
 
 
 params_list = [
-    Params(lr=1e-4, drop=0.1, sched_type='train_loss', patience=25, factor=0.05, weight_decay=1e-3, img_types=("T1c",))
+    Params(lr=1e-4, drop=0.1, sched_type='train_loss', patience=25, factor=0.05, weight_decay=1e-3, img_types=("T1c", "SWI"))
     # Params(lr=0.00005, drop=0.0, sched_type='val_loss', patience=25, factor=0.05, weight_decay=0.0),
     # Params(lr=0.0001, drop=0.1, sched_type='train_loss', patience=25, factor=0.05, weight_decay=0.0),
 ]
 
 legend = 'lr drop val_or_train_sched patience factor weight_decay shape img'
 for params in params_list:
-    params_title = f'{params.lr} {params.drop} {params.sched_type} {params.patience} {params.factor} {params.weight_decay} (128, 128, 64) t1c'
+    params_title = f'{params.lr} {params.drop} {params.sched_type} {params.patience} {params.factor} {params.weight_decay} {params.img_types}'
     logger = TensorBoardLogger(save_dir=f"{file_path}/lightning_logs", name=f"vit_model_{params_title}")
     # Model
     # model = ViT(config)
@@ -130,38 +130,28 @@ for params in params_list:
         }
     )
 
-    # Dataset
-    # train = [2, 64, 172, 271]
-    # val = [383, 481]
-    # data = pd.read_csv("temp/train_labels.csv")
-    # train_df = data[data['BraTS21ID'].isin(train)]
-    # val_df = data[data['BraTS21ID'].isin(val)]
+
 
 
     data = pd.read_csv("labels.csv")
     data = clean_data(data, config.target)
-    # train_dataset = BrainRSNADataset(data=train_df, is_train=True, mri_types=("T1w",))
-    # val_dataset = BrainRSNADataset(data=val_df, is_train=False, mri_types=("T1w",))
 
-    # train_loader = DataLoader(train_dataset, batch_size=5, num_workers=5)
-    # val_loader = DataLoader(val_dataset, batch_size=5, shuffle=False, num_workers=5)
 
     train_df, tmp_df = train_test_split(data, test_size=0.3, random_state=6969)
     train_df = train_df.iloc[:2]
 
     # train_df = train_df.iloc[:3]
 
-    # num_negative = len(train_df[train_df[config.target] == 0])
-    # num_positive = len(train_df) - num_negative
+    num_negative = len(train_df[train_df[config.target] == 0])
+    num_positive = len(train_df) - num_negative
 
-    # # neg must be first cuz of indexing by label
-    # class_counts = [num_negative, num_positive]
-    # class_weights = 1. / torch.tensor(class_counts, dtype=torch.float)
-    # sample_weights = [class_weights[int(label)] for label in train_df[config.target]]
-    # sampler = WeightedRandomSampler(weights=sample_weights, num_samples=len(sample_weights), replacement=True)
+    # neg must be first cuz of indexing by label
+    class_counts = [num_negative, num_positive]
+    class_weights = 1. / torch.tensor(class_counts, dtype=torch.float)
+    sample_weights = [class_weights[int(label)] for label in train_df[config.target]]
+    sampler = WeightedRandomSampler(weights=sample_weights, num_samples=len(sample_weights), replacement=True)
 
     val_df, test_df = train_test_split(tmp_df, test_size=0.5, random_state=6969)
-    val_df = val_df.iloc[:2]
 
     train_dataset = BrainDataset(data=train_df, is_train=True, types=params.img_types)
     val_dataset = BrainDataset(data=val_df, is_train=False, types=params.img_types)
@@ -170,18 +160,19 @@ for params in params_list:
 
 
 
-    train_loader = DataLoader(train_dataset, batch_size=5, num_workers=5)
+    train_loader = DataLoader(train_dataset, batch_size=5, sampler=sampler, num_workers=5)
     val_loader = DataLoader(val_dataset, batch_size=5, shuffle=False, num_workers=5)
     # test_loader = DataLoader(test_dataset, batch_size=12, shuffle=False, num_workers=5)
 
-    torch.cuda.empty_cache()
     trainer = L.Trainer(
-    max_epochs=2,
+    max_epochs=150,
     logger=logger,
-    accelerator="auto",
-    devices="auto",
+    accelerator="gpu",  
+    strategy="ddp",      
+    devices=4,          
+    num_nodes=2,         
     callbacks=[checkpoint_callback]
-    )
+)
     trainer.fit(model, train_loader, val_loader)
 
 
