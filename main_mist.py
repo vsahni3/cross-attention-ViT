@@ -147,20 +147,21 @@ for params in params_list:
     # val_loader = DataLoader(val_dataset, batch_size=5, shuffle=False, num_workers=5)
 
     train_df, tmp_df = train_test_split(data, test_size=0.3, random_state=6969)
+    train_df = train_df.iloc[:2]
 
     # train_df = train_df.iloc[:3]
 
-    num_negative = len(train_df[train_df[config.target] == 0])
-    num_positive = len(train_df) - num_negative
+    # num_negative = len(train_df[train_df[config.target] == 0])
+    # num_positive = len(train_df) - num_negative
 
-    # neg must be first cuz of indexing by label
-    class_counts = [num_negative, num_positive]
-    class_weights = 1. / torch.tensor(class_counts, dtype=torch.float)
-    sample_weights = [class_weights[int(label)] for label in train_df[config.target]]
-    sampler = WeightedRandomSampler(weights=sample_weights, num_samples=len(sample_weights), replacement=True)
+    # # neg must be first cuz of indexing by label
+    # class_counts = [num_negative, num_positive]
+    # class_weights = 1. / torch.tensor(class_counts, dtype=torch.float)
+    # sample_weights = [class_weights[int(label)] for label in train_df[config.target]]
+    # sampler = WeightedRandomSampler(weights=sample_weights, num_samples=len(sample_weights), replacement=True)
 
     val_df, test_df = train_test_split(tmp_df, test_size=0.5, random_state=6969)
-    # val_df = val_df.iloc[:3]
+    val_df = val_df.iloc[:2]
 
     train_dataset = BrainDataset(data=train_df, is_train=True, types=params.img_types)
     val_dataset = BrainDataset(data=val_df, is_train=False, types=params.img_types)
@@ -169,7 +170,7 @@ for params in params_list:
 
 
 
-    train_loader = DataLoader(train_dataset, batch_size=5, num_workers=5, sampler=sampler)
+    train_loader = DataLoader(train_dataset, batch_size=5, num_workers=5)
     val_loader = DataLoader(val_dataset, batch_size=5, shuffle=False, num_workers=5)
     # test_loader = DataLoader(test_dataset, batch_size=12, shuffle=False, num_workers=5)
 

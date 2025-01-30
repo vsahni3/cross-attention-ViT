@@ -56,7 +56,6 @@ from monai.config import print_config
 from monai.metrics import DiceMetric
 from sklearn.model_selection import train_test_split
 import pandas as pd 
-import nibabel as nib
 
 import copy
 import config
@@ -136,8 +135,6 @@ class BrainDataset(Dataset):
             img_path = f"{self.folder}/{case_id}_nifti/{case_id}_{mri_type}.nii.gz"
             cao = {"image": img_path}
             transform = self.train_transforms if self.is_train else self.test_transforms
-            img = nib.load(image_path)
-            print("✅ NIfTI file loaded successfully:", img.shape)
             affined_data_dict = transform(cao)   
             img_tensor = affined_data_dict['image'].to(torch.float)
             data.append(img_tensor)
