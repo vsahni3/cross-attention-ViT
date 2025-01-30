@@ -13,8 +13,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 import torch.nn as nn
 from collections import namedtuple
-print(1)
-fefef
+
 
 
 # DIM / IMAGE SIZE ONLY 128 MAYBE UPSCALE IF NEEDED
@@ -176,7 +175,7 @@ for params in params_list:
 
     torch.cuda.empty_cache()
     trainer = L.Trainer(
-    max_epochs=150,
+    max_epochs=2,
     logger=logger,
     accelerator="auto",
     devices="auto",
