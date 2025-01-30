@@ -16,7 +16,8 @@ from sklearn.model_selection import train_test_split
 import torch.nn as nn
 from modify_model import get_model_upto_layer
 from collections import namedtuple
-
+print(1)
+fefef
 
 
 # DIM / IMAGE SIZE ONLY 128 MAYBE UPSCALE IF NEEDED
