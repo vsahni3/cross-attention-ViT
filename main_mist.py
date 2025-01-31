@@ -164,7 +164,7 @@ for params in params_list:
 
     torch.cuda.empty_cache()
     trainer = L.Trainer(
-    max_epochs=150,
+    max_epochs=250,
     logger=logger,
     accelerator="gpu",  
     strategy="ddp",      
