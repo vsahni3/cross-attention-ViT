@@ -105,9 +105,9 @@ Params = namedtuple("Params", ["lr", "drop", "sched_type", "patience", "factor",
 
 
 params_list = [
-    Params(lr=1e-4, drop=0.0, sched_type='train_loss', patience=25, factor=0.05, weight_decay=1e-3, img_types=("T1c", "T2")),
-    Params(lr=1e-4, drop=0.1, sched_type='train_loss', patience=25, factor=0.05, weight_decay=1e-3, img_types=("T1c", "T2")),
-    Params(lr=1e-4, drop=0.1, sched_type='train_loss', patience=25, factor=0.0, weight_decay=1e-3, img_types=("T1c", "T2"))
+    Params(lr=1e-4, drop=0.1, sched_type='train_loss', patience=25, factor=0.05, weight_decay=1e-3, img_types=("T1c", "SWI")),
+    Params(lr=1e-4, drop=0.1, sched_type='train_loss', patience=25, factor=0.1, weight_decay=1e-3, img_types=("T1c", "SWI")),
+    Params(lr=1e-4, drop=0.0, sched_type='train_loss', patience=25, factor=0.3, weight_decay=1e-3, img_types=("T1c", "SWI"))
 ]
 
 legend = 'lr drop val_or_train_sched patience factor weight_decay shape img'
@@ -158,8 +158,8 @@ for params in params_list:
 
 
 
-    train_loader = DataLoader(train_dataset, batch_size=12, sampler=sampler, num_workers=5)
-    val_loader = DataLoader(val_dataset, batch_size=12, shuffle=False, num_workers=5)
+    train_loader = DataLoader(train_dataset, batch_size=10, sampler=sampler, num_workers=5)
+    val_loader = DataLoader(val_dataset, batch_size=10, shuffle=False, num_workers=5)
     # test_loader = DataLoader(test_dataset, batch_size=12, shuffle=False, num_workers=5)
 
     torch.cuda.empty_cache()
