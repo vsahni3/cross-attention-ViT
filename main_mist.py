@@ -57,12 +57,10 @@ Params = namedtuple("Params", ["lr", "drop", "sched_type", "patience", "factor",
 #AJWIDNWEFNIEFNEOJFKEFMEMFE
 
 params_list = [
-    Params(lr=1e-4, drop=0.0, sched_type='train_loss', patience=25, factor=0.05, weight_decay=1e-3, img_types=("T1c", "T2")),
-    Params(lr=1e-4, drop=0.1, sched_type='train_loss', patience=25, factor=0.05, weight_decay=1e-3, img_types=("T1c", "T2")),
-    Params(lr=1e-4, drop=0.0, sched_type='train_loss', patience=25, factor=0.2, weight_decay=1e-3, img_types=("T1c", "T2"))
+    Params(lr=1e-4, drop=0.1, sched_type='train_loss', patience=25, factor=0.05, weight_decay=1e-3, img_types=("T1c", "SWI")),
+    Params(lr=1e-4, drop=0.0, sched_type='train_loss', patience=25, factor=0.2, weight_decay=1e-3, img_types=("T1c", "SWI"))
 ]
-with open('file.txt', 'w') as f:
-    f.write('')
+
 legend = 'lr drop val_or_train_sched patience factor weight_decay shape img'
 for params in params_list:
     params_title = f'{params.lr} {params.drop} {params.sched_type} {params.patience} {params.factor} {params.weight_decay} {params.img_types}'
@@ -93,7 +91,6 @@ for params in params_list:
 
     train_df, tmp_df = train_test_split(data, test_size=0.3, random_state=6969)
 
-    # train_df = train_df.iloc[:3]
 
     num_negative = len(train_df[train_df[config.target] == 0])
     num_positive = len(train_df) - num_negative
@@ -105,7 +102,6 @@ for params in params_list:
     sampler = WeightedRandomSampler(weights=sample_weights, num_samples=len(sample_weights), replacement=True)
 
     val_df, test_df = train_test_split(tmp_df, test_size=0.5, random_state=6969)
-    # val_df = val_df.iloc[:3]
 
     train_dataset = BrainDataset(data=train_df, is_train=True, types=params.img_types)
     val_dataset = BrainDataset(data=val_df, is_train=False, types=params.img_types)
@@ -125,11 +121,8 @@ for params in params_list:
     logger=logger,
     accelerator="auto",
     devices=4,
-    callbacks=[checkpoint_callback]
+    callbacks=[checkpoint_callback],
+    nodes=2,
+    accumulate_grad_batches=2
     )
     trainer.fit(model, train_loader, val_loader)
-
-
-
-
-

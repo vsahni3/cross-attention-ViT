@@ -7,9 +7,6 @@ from monai.networks.nets import DenseNet121
 from modify_model import get_model_upto_layer
 import ml_collections
 import torchmetrics
-import torch
-from torch.profiler import profile, record_function, ProfilerActivity
-
 
 
 
@@ -218,10 +215,7 @@ class ViT3D(L.LightningModule):
         
         # 5. Pass through Transformer
         x = self.transformer(x)  # (B, N+1, C) or (B, N, C)
-        with open(f'file.txt', 'a') as f:
-            f.write(f"Allocated Memory: {torch.cuda.memory_allocated() / 1e6:.2f} MB\n")
-            f.write(f"Reserved Memory: {torch.cuda.memory_reserved() / 1e6:.2f} MB\n")
-            f.write(f'{torch.cuda.memory_summary()}\n')
+
         
         # 6. Classification head: use the [CLS] token output
         if self.add_cls_token:
@@ -255,11 +249,8 @@ class ViT3D(L.LightningModule):
 
     def training_step(self, batch, batch_idx):
         x, labels = batch
-        with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True) as prof:
-            with record_function("model_inference"):
-                logits, loss = self(x, labels)
-        with open('file.txt', 'a') as f:
-            f.write(prof.key_averages().table(sort_by="cuda_memory_usage", row_limit=10) + '\n\n')
+        logits, loss = self(x, labels)
+
         
         self.log('train_loss', loss, on_epoch=True, on_step=False, sync_dist=True)
         self.log_stats(True, logits, labels)
