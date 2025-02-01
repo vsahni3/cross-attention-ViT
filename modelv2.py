@@ -212,10 +212,11 @@ class ViT3D(L.LightningModule):
         
         # 5. Pass through Transformer
         x = self.transformer(x)  # (B, N+1, C) or (B, N, C)
-        file_path = '/scratch/p/ptyrrell/vsahni3'
-        with open(f'{file_path}/file.txt', 'w') as f:
+        file_path = '/scratch/p/ptyrrell/vsahni3/'
+        with open(f'file.txt', 'w') as f:
             f.write(f"Allocated Memory: {torch.cuda.memory_allocated() / 1e6:.2f} MB\n")
-            f.write(f"Reserved Memory: {torch.cuda.memory_reserved() / 1e6:.2f} MB\n\n")
+            f.write(f"Reserved Memory: {torch.cuda.memory_reserved() / 1e6:.2f} MB\n")
+            f.write(f'{torch.cuda.memory_summary()}\n')
         
         # 6. Classification head: use the [CLS] token output
         if self.add_cls_token:

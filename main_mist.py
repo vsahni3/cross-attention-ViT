@@ -169,8 +169,7 @@ for params in params_list:
     accelerator="gpu",  
     strategy="ddp",      
     devices=4,          
-    num_nodes=2,         
-    callbacks=[checkpoint_callback],
+    num_nodes=1,         
     accumulate_grad_batches=2
 )
     trainer.fit(model, train_loader, val_loader)
