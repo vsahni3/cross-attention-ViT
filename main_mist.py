@@ -158,8 +158,8 @@ for params in params_list:
 
 
 
-    train_loader = DataLoader(train_dataset, batch_size=8, sampler=sampler, num_workers=5)
-    val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False, num_workers=5)
+    train_loader = DataLoader(train_dataset, batch_size=5, sampler=sampler, num_workers=5)
+    val_loader = DataLoader(val_dataset, batch_size=5, shuffle=False, num_workers=5)
     # test_loader = DataLoader(test_dataset, batch_size=12, shuffle=False, num_workers=5)
 
     torch.cuda.empty_cache()
@@ -170,7 +170,8 @@ for params in params_list:
     strategy="ddp",      
     devices=4,          
     num_nodes=2,         
-    callbacks=[checkpoint_callback]
+    callbacks=[checkpoint_callback],
+    accumulate_grad_batches=2
 )
     trainer.fit(model, train_loader, val_loader)
 
