@@ -7,6 +7,12 @@ from monai.networks.nets import DenseNet121
 from modify_model import get_model_upto_layer
 import ml_collections
 import torchmetrics
+import torch
+from torch.profiler import profile, record_function, ProfilerActivity
+
+
+
+
 class CNN3DEncoder(nn.Module):
     """
     A simple 3D CNN that encodes a 3D volume into a smaller feature map.
@@ -212,8 +218,7 @@ class ViT3D(L.LightningModule):
         
         # 5. Pass through Transformer
         x = self.transformer(x)  # (B, N+1, C) or (B, N, C)
-        file_path = '/scratch/p/ptyrrell/vsahni3/'
-        with open(f'file.txt', 'w') as f:
+        with open(f'file.txt', 'a') as f:
             f.write(f"Allocated Memory: {torch.cuda.memory_allocated() / 1e6:.2f} MB\n")
             f.write(f"Reserved Memory: {torch.cuda.memory_reserved() / 1e6:.2f} MB\n")
             f.write(f'{torch.cuda.memory_summary()}\n')
@@ -250,8 +255,12 @@ class ViT3D(L.LightningModule):
 
     def training_step(self, batch, batch_idx):
         x, labels = batch
-
-        logits, loss = self(x, labels)
+        with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True) as prof:
+            with record_function("model_inference"):
+                logits, loss = self(x, labels)
+        with open('file.txt', 'a') as f:
+            f.write(prof.key_averages().table(sort_by="cuda_memory_usage", row_limit=10) + '\n\n')
+        
         self.log('train_loss', loss, on_epoch=True, on_step=False, sync_dist=True)
         self.log_stats(True, logits, labels)
         return loss
