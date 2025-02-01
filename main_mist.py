@@ -1,9 +1,7 @@
 from dataset_ucsf import BrainDataset, clean_data
-from dataset import BrainRSNADataset
 from modelv2 import ViT3D
 from torch.utils.data import DataLoader, random_split, WeightedRandomSampler
 import torch
-from utils import compute_metrics
 import lightning as L
 from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers.tensorboard import TensorBoardLogger
@@ -11,10 +9,8 @@ from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 from torch.utils.data.distributed import DistributedSampler 
 import config
 import pandas as pd
-from monai.networks.nets import DenseNet121
 from sklearn.model_selection import train_test_split
 import torch.nn as nn
-from modify_model import get_model_upto_layer
 from collections import namedtuple
 
 
