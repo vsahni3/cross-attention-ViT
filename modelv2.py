@@ -7,7 +7,8 @@ from monai.networks.nets import DenseNet121
 from modify_model import get_model_upto_layer
 import ml_collections
 import torchmetrics
-
+import logging
+logging.basicConfig(filename="file.txt", level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 
 
 class CNN3DEncoder(nn.Module):
@@ -100,13 +101,13 @@ class ViT3D(L.LightningModule):
                  optimizer_params: dict,
                  lr: float,
                  weight_decay: float,
+                 num_modalities: int,
                  config: ml_collections.ConfigDict,
                  num_classes: int = 2,
                  add_cls_token: bool = True,
                  pretrained_cnn: bool = False,
                  cnn_out_dim: tuple = (64, 8, 8, 8),
                  label_smoothing: float = 0.0,
-                 num_modalities: int = 2,
                  dropout: float = 0.0,
                  growth_rate: int = 16):
         """
@@ -120,6 +121,15 @@ class ViT3D(L.LightningModule):
             add_cls_token: Whether to prepend a [CLS] token for classification.
         """
         super().__init__()
+        for i in range(torch.cuda.device_count()):
+            # The context manager temporarily sets the active GPU to i
+            with torch.cuda.device(i):
+                logging.debug(f"GPU {i}: {torch.cuda.get_device_name(i)}")
+                logging.debug(f"  Allocated: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
+                logging.debug(f"  Reserved: {torch.cuda.memory_reserved() / 1024**3:.2f} GB")
+                logging.debug(f"  Max Allocated: {torch.cuda.max_memory_allocated() / 1024**3:.2f} GB")
+                logging.debug(f"  Max Reserved: {torch.cuda.max_memory_reserved() / 1024**3:.2f} GB")
+                logging.debug("-" * 50)
         self.lr = lr
         self.optimizer_params = optimizer_params
         self.weight_decay = weight_decay
@@ -189,6 +199,7 @@ class ViT3D(L.LightningModule):
         """
         # 1. Pass through the 3D CNN encoder
         #    Output shape: (B, hidden_dim, D', H', W')
+        logging.debug(f'{x.shape}')
         all_tokens = []
         for modality in range(x.shape[1]):
             cur_x = self.encoder_3d(x.select(1, modality))
@@ -218,6 +229,15 @@ class ViT3D(L.LightningModule):
         
         # 5. Pass through Transformer
         x = self.transformer(x)  # (B, N+1, C) or (B, N, C)
+        for i in range(torch.cuda.device_count()):
+            # The context manager temporarily sets the active GPU to i
+            with torch.cuda.device(i):
+                logging.debug(f"GPU {i}: {torch.cuda.get_device_name(i)}")
+                logging.debug(f"  Allocated: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
+                logging.debug(f"  Reserved: {torch.cuda.memory_reserved() / 1024**3:.2f} GB")
+                logging.debug(f"  Max Allocated: {torch.cuda.max_memory_allocated() / 1024**3:.2f} GB")
+                logging.debug(f"  Max Reserved: {torch.cuda.max_memory_reserved() / 1024**3:.2f} GB")
+                logging.debug("-" * 50)
 
         
         # 6. Classification head: use the [CLS] token output
