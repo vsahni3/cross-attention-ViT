@@ -124,12 +124,7 @@ class ViT3D(L.LightningModule):
         for i in range(torch.cuda.device_count()):
             # The context manager temporarily sets the active GPU to i
             with torch.cuda.device(i):
-                logging.debug(f"GPU {i}: {torch.cuda.get_device_name(i)}")
-                logging.debug(f"  Allocated: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
-                logging.debug(f"  Reserved: {torch.cuda.memory_reserved() / 1024**3:.2f} GB")
-                logging.debug(f"  Max Allocated: {torch.cuda.max_memory_allocated() / 1024**3:.2f} GB")
-                logging.debug(f"  Max Reserved: {torch.cuda.max_memory_reserved() / 1024**3:.2f} GB")
-                logging.debug("-" * 50)
+                logging.debug(torch.cuda.memory_summary(device=i, abbreviated=False))
         self.lr = lr
         self.optimizer_params = optimizer_params
         self.weight_decay = weight_decay
@@ -232,12 +227,7 @@ class ViT3D(L.LightningModule):
         for i in range(torch.cuda.device_count()):
             # The context manager temporarily sets the active GPU to i
             with torch.cuda.device(i):
-                logging.debug(f"GPU {i}: {torch.cuda.get_device_name(i)}")
-                logging.debug(f"  Allocated: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
-                logging.debug(f"  Reserved: {torch.cuda.memory_reserved() / 1024**3:.2f} GB")
-                logging.debug(f"  Max Allocated: {torch.cuda.max_memory_allocated() / 1024**3:.2f} GB")
-                logging.debug(f"  Max Reserved: {torch.cuda.max_memory_reserved() / 1024**3:.2f} GB")
-                logging.debug("-" * 50)
+                logging.debug(torch.cuda.memory_summary(device=i, abbreviated=False))
 
         
         # 6. Classification head: use the [CLS] token output
