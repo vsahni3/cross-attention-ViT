@@ -23,7 +23,6 @@ def get_mgmt_config():
     config.n_skip = 5
 
     config.img_size = (128, 128, 64)
-    config.num_modalities = 2
     config.in_channels = 1
     config.spacing = (2, 2, 2)
 

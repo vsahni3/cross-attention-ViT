@@ -106,6 +106,7 @@ class ViT3D(L.LightningModule):
                  pretrained_cnn: bool = False,
                  cnn_out_dim: tuple = (64, 8, 8, 8),
                  label_smoothing: float = 0.0,
+                 num_modalities: int = 2,
                  dropout: float = 0.0,
                  growth_rate: int = 16):
         """
@@ -150,7 +151,7 @@ class ViT3D(L.LightningModule):
             num_tokens = cnn_out_dim[1] * cnn_out_dim[2] * cnn_out_dim[3]
         else:
             D, H, W = config.img_size
-            num_tokens = (D // 8) * (H // 8) * (W // 8) * config.num_modalities
+            num_tokens = (D // 8) * (H // 8) * (W // 8) * num_modalities
         self.pos_embed = nn.Parameter(torch.zeros(1, num_tokens + int(add_cls_token), config.hidden_dim))
         
         # 3. Transformer encoder
