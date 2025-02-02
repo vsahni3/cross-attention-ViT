@@ -57,9 +57,9 @@ Params = namedtuple("Params", ["lr", "drop", "sched_type", "patience", "factor",
 #AJWIDNWEFNIEFNEOJFKEFMEMFE
 
 params_list = [
-    Params(lr=1e-4, drop=0.1, sched_type='train_loss', patience=25, factor=0.05, weight_decay=1e-3, img_types=("T1c", "T1"), label_smoothing=0.0),
-    Params(lr=1e-4, drop=0.0, sched_type='train_loss', patience=25, factor=0.05, weight_decay=1e-3, img_types=("T1c", "T1"), label_smoothing=0.1),
-    Params(lr=1e-4, drop=0.0, sched_type='train_loss', patience=25, factor=0.05, weight_decay=1e-3, img_types=("T1c", "T1"), label_smoothing=0.0)
+    Params(lr=1e-4, drop=0.1, sched_type='train_loss', patience=25, factor=0.05, weight_decay=1e-3, img_types=("DWI",), label_smoothing=0.0),
+    Params(lr=1e-4, drop=0.0, sched_type='train_loss', patience=25, factor=0.05, weight_decay=1e-3, img_types=("DWI",), label_smoothing=0.1),
+    Params(lr=1e-4, drop=0.0, sched_type='train_loss', patience=25, factor=0.2, weight_decay=1e-3, img_types=("DWI",), label_smoothing=0.0)
 ]
 
 legend = 'lr drop val_or_train_sched patience factor weight_decay shape img'
