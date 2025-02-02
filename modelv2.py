@@ -7,8 +7,8 @@ from monai.networks.nets import DenseNet121
 from modify_model import get_model_upto_layer
 import ml_collections
 import torchmetrics
-import logging
-logging.basicConfig(filename="file.txt", level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
+# import logging
+# logging.basicConfig(filename="file.txt", level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 
 
 class CNN3DEncoder(nn.Module):
@@ -121,10 +121,6 @@ class ViT3D(L.LightningModule):
             add_cls_token: Whether to prepend a [CLS] token for classification.
         """
         super().__init__()
-        for i in range(torch.cuda.device_count()):
-            # The context manager temporarily sets the active GPU to i
-            with torch.cuda.device(i):
-                logging.debug(torch.cuda.memory_summary(device=i, abbreviated=False))
         self.lr = lr
         self.optimizer_params = optimizer_params
         self.weight_decay = weight_decay
@@ -194,7 +190,7 @@ class ViT3D(L.LightningModule):
         """
         # 1. Pass through the 3D CNN encoder
         #    Output shape: (B, hidden_dim, D', H', W')
-        logging.debug(f'{x.shape}')
+
         all_tokens = []
         for modality in range(x.shape[1]):
             cur_x = self.encoder_3d(x.select(1, modality))
@@ -224,10 +220,9 @@ class ViT3D(L.LightningModule):
         
         # 5. Pass through Transformer
         x = self.transformer(x)  # (B, N+1, C) or (B, N, C)
-        for i in range(torch.cuda.device_count()):
-            # The context manager temporarily sets the active GPU to i
-            with torch.cuda.device(i):
-                logging.debug(torch.cuda.memory_summary(device=i, abbreviated=False))
+        
+        # logging.debug("\n" + torch.cuda.memory_summary())
+
 
         
         # 6. Classification head: use the [CLS] token output
