@@ -124,6 +124,6 @@ for params in params_list:
     accelerator="auto",
     devices=4,
     callbacks=[checkpoint_callback],
-    num_nodes=2
+    num_nodes=1
     )
     trainer.fit(model, train_loader, val_loader)
