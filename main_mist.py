@@ -48,7 +48,7 @@ def reset_weights(m):
 # Instantiate the model
 
 # model.apply(reset_weights)
-Params = namedtuple("Params", ["lr", "drop", "sched_type", "patience", "factor", "weight_decay", "img_types"])
+Params = namedtuple("Params", ["lr", "drop", "sched_type", "patience", "factor", "weight_decay", "img_types", "label_smoothing"])
 # change validation, make it balanced
 # label smoothing
 # stochatsic depth
@@ -57,13 +57,14 @@ Params = namedtuple("Params", ["lr", "drop", "sched_type", "patience", "factor",
 #AJWIDNWEFNIEFNEOJFKEFMEMFE
 
 params_list = [
-    Params(lr=1e-4, drop=0.1, sched_type='train_loss', patience=25, factor=0.05, weight_decay=1e-3, img_types=("T1c", "SWI")),
-    Params(lr=1e-4, drop=0.0, sched_type='train_loss', patience=25, factor=0.2, weight_decay=1e-3, img_types=("T1c", "SWI"))
+    Params(lr=1e-4, drop=0.1, sched_type='train_loss', patience=25, factor=0.05, weight_decay=1e-3, img_types=("T1c", "SWI"), label_smoothing=0.0),
+    Params(lr=1e-4, drop=0.0, sched_type='train_loss', patience=25, factor=0.2, weight_decay=1e-3, img_types=("T1c", "SWI"), label_smoothing=0.0),
+    Params(lr=1e-4, drop=0.0, sched_type='train_loss', patience=25, factor=0.05, weight_decay=1e-3, img_types=("T1c", "SWI"), label_smoothing=0.1)
 ]
 
 legend = 'lr drop val_or_train_sched patience factor weight_decay shape img'
 for params in params_list:
-    params_title = f'{params.lr} {params.drop} {params.sched_type} {params.patience} {params.factor} {params.weight_decay} {params.img_types}'
+    params_title = f'{params.lr} {params.drop} {params.sched_type} {params.patience} {params.factor} {params.weight_decay} {params.img_types} {params.label_smoothing}'
     logger = TensorBoardLogger(save_dir=f"{file_path}/lightning_logs", name=f"vit_model_{params_title}")
     # Model
     # model = ViT(config)
@@ -73,6 +74,7 @@ for params in params_list:
         add_cls_token=True,
         dropout=params.drop,
         lr=params.lr,
+        label_smoothing=params.label_smoothing,
         weight_decay=params.weight_decay,
         optimizer_params={
             'type': params.sched_type,
@@ -122,7 +124,6 @@ for params in params_list:
     accelerator="auto",
     devices=4,
     callbacks=[checkpoint_callback],
-    nodes=2,
-    accumulate_grad_batches=2
+    num_nodes=2
     )
     trainer.fit(model, train_loader, val_loader)

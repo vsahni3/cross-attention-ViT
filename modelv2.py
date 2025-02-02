@@ -105,6 +105,7 @@ class ViT3D(L.LightningModule):
                  add_cls_token: bool = True,
                  pretrained_cnn: bool = False,
                  cnn_out_dim: tuple = (64, 8, 8, 8),
+                 label_smoothing: float = 0.0,
                  dropout: float = 0.0,
                  growth_rate: int = 16):
         """
@@ -121,6 +122,7 @@ class ViT3D(L.LightningModule):
         self.lr = lr
         self.optimizer_params = optimizer_params
         self.weight_decay = weight_decay
+        self.label_smoothing = label_smoothing
         if pretrained_cnn:
             raw_model = DenseNet121(
                 spatial_dims=3,  
@@ -227,7 +229,7 @@ class ViT3D(L.LightningModule):
       
         
         logits = self.mlp_head(cls_out)    # (B, num_classes)
-        loss = F.cross_entropy(logits, labels)
+        loss = F.cross_entropy(logits, labels, label_smoothing=self.label_smoothing)
         return logits, loss
 
     def log_stats(self, is_train, logits, labels):
