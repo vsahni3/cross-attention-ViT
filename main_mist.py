@@ -1,5 +1,5 @@
 from dataset_ucsf import BrainDataset, clean_data
-from modelv2 import ViT3D
+from modelv3 import Model
 from torch.utils.data import DataLoader, random_split, WeightedRandomSampler
 import torch
 import lightning as L
@@ -8,6 +8,7 @@ from lightning.pytorch.loggers.tensorboard import TensorBoardLogger
 from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 from torch.utils.data.distributed import DistributedSampler 
 import config
+from config import modify_config
 import pandas as pd
 from sklearn.model_selection import train_test_split
 import torch.nn as nn
@@ -50,7 +51,7 @@ def create_sampler(train_df):
 # Instantiate the model
 
 # model.apply(reset_weights)
-Params = namedtuple("Params", ["lr", "drop", "sched_type", "patience", "factor", "weight_decay", "img_types", "label_smoothing"])
+Params = namedtuple("Params", ["lr", "dropout", "optim_params", "weight_decay", "img_types", "label_smoothing"])
 # label smoothing
 # stochatsic depth
 # precision affects
@@ -58,33 +59,19 @@ Params = namedtuple("Params", ["lr", "drop", "sched_type", "patience", "factor",
 #AJWIDNWEFNIEFNEOJFKEFMEMFE
 
 params_list = [
-    Params(lr=1e-4, drop=0.1, sched_type='train_loss', patience=25, factor=0.05, weight_decay=1e-3, img_types=("SWI", "T1c"), label_smoothing=0.0),
-    Params(lr=1e-4, drop=0.1, sched_type='train_loss', patience=25, factor=0.05, weight_decay=1e-3, img_types=("SWI", "T1c"), label_smoothing=0.1),
-    Params(lr=1e-4, drop=0.1, sched_type='val_loss', patience=25, factor=0.25, weight_decay=1e-3, img_types=("SWI", "T1c"), label_smoothing=0.0)
+    Params(lr=1e-4, dropout=0.1, optim_params={}, weight_decay=1e-3, img_types=("SWI", "T1c"), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.1, optim_params={}, weight_decay=1e-3, img_types=("SWI", "DWI"), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.1, optim_params={}, weight_decay=1e-3, img_types=("T1c", "FLAIR"), label_smoothing=0.0)
 ]
 
-legend = 'lr drop val_or_train_sched patience factor weight_decay shape img'
+
 for params in params_list:
-    params_title = f'{params.lr} {params.drop} {params.sched_type} {params.patience} {params.factor} {params.weight_decay} {params.img_types} {params.label_smoothing}'
+    params_title = f'{params.lr} {params.dropout} {params.optim_params} {params.weight_decay} {params.img_types} {params.label_smoothing}'
     logger = TensorBoardLogger(save_dir=f"{file_path}/lightning_logs", name=f"vit_model_{params_title}")
 
-    model = ViT3D(
-        config=config,
-        num_classes=2, 
-        add_cls_token=True,
-        dropout=params.drop,
-        label_smoothing=params.label_smoothing,
-        lr=params.lr,
-        num_modalities=len(params.img_types),
-        weight_decay=params.weight_decay,
-        optimizer_params={
-            'type': params.sched_type,
-            'patience': params.patience,
-            'factor': params.factor
-        }
-    )
-
-    # Dataset
+    config = modify_config(config, params)
+    config = modify_config(config, {'num_modalities': len(params.img_types)})
+    model = Model(config)
 
 
 
@@ -103,6 +90,7 @@ for params in params_list:
     train_dataset = BrainDataset(data=train_df, is_train=True, types=params.img_types)
     val_dataset = BrainDataset(data=val_df, is_train=False, types=params.img_types)
 
+
     # test_dataset = BrainDataset(data=test_df, is_train=False)
 
 
@@ -115,9 +103,10 @@ for params in params_list:
     torch.cuda.empty_cache()
     trainer = L.Trainer(
     max_epochs=250,
-    logger=logger,
     accelerator="auto",
+    logger=logger,
     devices=4,
+    num_nodes=2,
     callbacks=[checkpoint_callback]
     )
     trainer.fit(model, train_loader, val_loader)

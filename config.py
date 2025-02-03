@@ -2,29 +2,31 @@ import ml_collections
 
 def get_mgmt_config():
     config = ml_collections.ConfigDict()
-    config.patches = ml_collections.ConfigDict({'size': (4, 4, 4)})
-    config.patches.grid = (4, 4, 4)
-    config.hidden_dim = 64
-    config.transformer = ml_collections.ConfigDict()
-    config.transformer.mlp_dim = 512
-    config.transformer.num_heads = 8
-    config.transformer.num_layers = 12
-    config.transformer.attention_dropout_rate = 0.0
-    config.transformer.dropout_rate = 0.0
-    config.patch_size = 4
+    config.hidden_dim = 256
+    config.mlp_dim = 1024
+    config.num_heads = 8
+    config.num_layers = 12
+    config.patch_size = (4, 4, 4)
 
     config.conv_first_channel = 512
     config.encoder_channels = (16, 32, 64)
     config.down_factor = 2
     config.down_num = 2
-    config.decoder_channels = (96, 48, 32, 32, 16)
-    config.skip_channels = (32, 32, 32, 32, 16)
-    config.n_dims = 3
-    config.n_skip = 5
 
+
+    config.num_classes = 2
     config.img_size = (128, 128, 64)
     config.in_channels = 1
     config.spacing = (2, 2, 2)
 
     config.target = "MGMT status"
+    
+    return config
+
+def modify_config(config, params):
+    if not isinstance(params, dict):
+        params = params._asdict()
+    for key, value in params.items():
+        setattr(config, key, value)
+    
     return config
