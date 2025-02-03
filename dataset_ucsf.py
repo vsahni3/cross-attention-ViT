@@ -101,8 +101,8 @@ class BrainDataset(Dataset):
                     
                     #augmentations to prevent overfitting
                     RandFlipd(keys=["image"], prob=0.5, spatial_axis=0),  # Flip horizontally
-                    RandRotate90d(keys=["image"], prob=0.3, max_k=1),  # Rotate slightly
-                    RandAffined(keys=["image"], prob=0.3, rotate_range=(0.05, 0.05, 0.05), scale_range=(0.1, 0.1, 0.1)),  
+                    RandRotate90d(keys=["image"], prob=0.2, max_k=1),  # Rotate slightly
+                    RandAffined(keys=["image"], prob=0.2, rotate_range=(0.05, 0.05, 0.05), scale_range=(0.1, 0.1, 0.1)),  
                     ToTensord(keys=["image"]),
                 ]
             )
