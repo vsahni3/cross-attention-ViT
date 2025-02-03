@@ -12,45 +12,48 @@ import torchmetrics
 
 
 class CNN3DEncoder(nn.Module):
-    """
-    A simple 3D CNN that encodes a 3D volume into a smaller feature map.
-    """
-    def __init__(self, 
-                 in_channels: int = 1, 
-                 hidden_dim: int = 128):
+    def __init__(self, in_channels: int = 1, hidden_dim: int = 256):
         """
         Args:
             in_channels: Number of channels in the input volume (e.g., 1 for grayscale, 3 for RGB).
             hidden_dim: The output feature dimension from the CNN.
         """
         super().__init__()
-        self.conv1 = nn.Conv3d(in_channels, 64, kernel_size=3, stride=1, padding=1)
-        self.bn1   = nn.BatchNorm3d(64)
+
+        # First conv layer: Normal (stride=1) + Pooling
+        self.conv1 = nn.Conv3d(in_channels, hidden_dim // 8, kernel_size=3, stride=1, padding=1)
+        self.bn1   = nn.BatchNorm3d(hidden_dim // 8)
         
-        self.conv2 = nn.Conv3d(64, 128, kernel_size=3, stride=1, padding=1)
-        self.bn2   = nn.BatchNorm3d(128)
-        
-        self.conv3 = nn.Conv3d(128, hidden_dim, kernel_size=3, stride=1, padding=1)
-        self.bn3   = nn.BatchNorm3d(hidden_dim)
-        
+        # Second conv layer: Normal (stride=1) + Pooling
+        self.conv2 = nn.Conv3d(hidden_dim // 8, hidden_dim // 4, kernel_size=3, stride=1, padding=1)
+        self.bn2   = nn.BatchNorm3d(hidden_dim // 4)
+
+        # Third conv layer: Strided Conv (stride=2) for downsampling (no separate pool)
+        self.conv3 = nn.Conv3d(hidden_dim // 4, hidden_dim // 2, kernel_size=3, stride=2, padding=1)
+        self.bn3   = nn.BatchNorm3d(hidden_dim // 2)
+
+        # Fourth conv layer: Another Strided Conv (stride=2) for final downsampling
+        self.conv4 = nn.Conv3d(hidden_dim // 2, hidden_dim, kernel_size=3, stride=2, padding=1)
+        self.bn4   = nn.BatchNorm3d(hidden_dim)
+
+        # Pooling layer (used only twice)
         self.pool  = nn.MaxPool3d(kernel_size=2, stride=2)
-        
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
         Args:
             x: shape (B, in_channels, D, H, W)
         Returns:
-            Feature map of shape (B, hidden_dim, D//8, H//8, W//8)
-            after three 2x downsampling steps in each dimension.
+            Feature map of shape (B, hidden_dim*2, D//16, H//16, W//16)
         """
         x = F.relu(self.bn1(self.conv1(x)))
-        x = self.pool(x)  # downsample by factor of 2
+        x = self.pool(x)  # Downsample (D//2, H//2, W//2)
 
         x = F.relu(self.bn2(self.conv2(x)))
-        x = self.pool(x)  # downsample by factor of 2
+        x = self.pool(x)  # Downsample (D//4, H//4, W//4)
 
-        x = F.relu(self.bn3(self.conv3(x)))
-        x = self.pool(x)  # downsample by factor of 2
+        x = F.relu(self.bn3(self.conv3(x)))  # Strided Conv Downsampling (D//8, H//8, W//8)
+        x = F.relu(self.bn4(self.conv4(x)))  # Strided Conv Downsampling (D//16, H//16, W//16)
 
         return x
 
@@ -152,7 +155,7 @@ class ViT3D(L.LightningModule):
             num_tokens = cnn_out_dim[1] * cnn_out_dim[2] * cnn_out_dim[3]
         else:
             D, H, W = config.img_size
-            num_tokens = (D // 8) * (H // 8) * (W // 8) * num_modalities
+            num_tokens = (D // 16) * (H // 16) * (W // 16) * num_modalities
         self.pos_embed = nn.Parameter(torch.zeros(1, num_tokens + int(add_cls_token), config.hidden_dim))
         
         # 3. Transformer encoder
@@ -194,8 +197,7 @@ class ViT3D(L.LightningModule):
         all_tokens = []
         for modality in range(x.shape[1]):
             cur_x = self.encoder_3d(x.select(1, modality))
-            
-            
+
             B, C, Dp, Hp, Wp = cur_x.shape  # e.g. B, 128, D/8, H/8, W/8
             
             # 2. Flatten spatial dims => sequence of tokens
