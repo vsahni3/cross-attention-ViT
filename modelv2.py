@@ -167,8 +167,8 @@ class ViT3D(L.LightningModule):
         # 4. Classification head
         self.mlp_head = nn.Sequential(
             nn.LayerNorm(config.hidden_dim),
-            nn.Linear(config.hidden_dim, config.hidden_dim // 4),
-            nn.Linear(config.hidden_dim // 4, num_classes),
+            nn.Linear(config.hidden_dim, config.hidden_dim // 8),
+            nn.Linear(config.hidden_dim // 8, num_classes),
         )
         
         # Initialize parameters
