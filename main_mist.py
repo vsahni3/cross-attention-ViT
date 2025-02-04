@@ -13,6 +13,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 import torch.nn as nn
 from collections import namedtuple
+from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 
 
 
@@ -31,6 +32,15 @@ checkpoint_callback = ModelCheckpoint(
    save_top_k=3,
    mode="min",
 )
+
+early_stop_callback = EarlyStopping(
+    monitor="val_loss",  # metric name to monitor
+    min_delta=0.00,      # minimum change in the monitored metric to be considered an improvement
+    patience=25,          # number of epochs with no improvement after which training will be stopped
+    verbose=True,        # whether to print messages when stopping early
+    mode="min"           # mode "min" because we want the loss to be as low as possible
+)
+
 
 
 
@@ -59,9 +69,9 @@ Params = namedtuple("Params", ["lr", "dropout", "optim_params", "weight_decay", 
 #AJWIDNWEFNIEFNEOJFKEFMEMFE
 mods = ['DWI', 'SWI', 'T1c', 'brain_parenchyma_segmentation', 'tumor_segmentation', 'T2', 'ADC', 'ASL']
 params_list = [
-    Params(lr=1e-4, dropout=0.1, optim_params={}, weight_decay=1e-3, img_types=(mods[1], mods[2]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.1, optim_params={}, weight_decay=1e-3, img_types=(mods[0], mods[1]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.1, optim_params={}, weight_decay=1e-3, img_types=(mods[3], mods[1]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.1, optim_params={'factor': 0.5, 'patience': 25, 'type': 'val_loss'}, weight_decay=5e-4, img_types=(mods[1], mods[2]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.1, optim_params={'factor': 0.25, 'patience': 25, 'type': 'val_loss'}, weight_decay=5e-4, img_types=(mods[0], mods[2]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.1, optim_params={'factor': 0.1, 'patience': 25, 'type': 'val_loss'}, weight_decay=5e-4, img_types=(mods[3], mods[2]), label_smoothing=0.0),
 ]
 
 
@@ -107,7 +117,7 @@ for params in params_list:
     logger=logger,
     devices=4,
     num_nodes=2,
-    callbacks=[checkpoint_callback]
+    callbacks=[checkpoint_callback, early_stop_callback]
     )
     trainer.fit(model, train_loader, val_loader)
 
