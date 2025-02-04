@@ -72,7 +72,7 @@ class Transformer(nn.Module):
         for _ in range(config.num_layers):
           
             self.layers.append(nn.ModuleList([
-                PreNorm(config, Attention(config, dim_head=config.hidden_dim // config.num_heads)),
+                PreNorm(config, Attention(config, dim_head=((config.hidden_dim // config.num_heads) * 2))),
                 PreNorm(config, FeedForward(config))
             ]))
     def forward(self, x):

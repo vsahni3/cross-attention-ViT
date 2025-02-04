@@ -57,11 +57,17 @@ Params = namedtuple("Params", ["lr", "dropout", "optim_params", "weight_decay", 
 # precision affects
 # shuffle labels to see if truly memorizng
 #AJWIDNWEFNIEFNEOJFKEFMEMFE
-
+mods = ['DWI', 'SWI', 'T1c', 'brain_parenchyma_segmentation', 'tumor_segmentation', 'T2', 'ADC', 'ASL']
 params_list = [
-    Params(lr=1e-4, dropout=0.1, optim_params={}, weight_decay=1e-3, img_types=("SWI", "T1c"), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.1, optim_params={}, weight_decay=1e-3, img_types=("SWI", "DWI"), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.1, optim_params={}, weight_decay=1e-3, img_types=("T1c", "FLAIR"), label_smoothing=0.0)
+    Params(lr=1e-4, dropout=0.1, optim_params={}, weight_decay=1e-3, img_types=(mods[0], mods[2]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.1, optim_params={}, weight_decay=1e-3, img_types=(mods[3], mods[4]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.1, optim_params={}, weight_decay=1e-3, img_types=(mods[-2], mods[-1]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.1, optim_params={}, weight_decay=1e-3, img_types=(mods[2], mods[-3]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.1, optim_params={}, weight_decay=1e-3, img_types=(mods[4], mods[0]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.1, optim_params={}, weight_decay=1e-3, img_types=(mods[2], mods[4]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.1, optim_params={}, weight_decay=1e-3, img_types=(mods[3], mods[0]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.1, optim_params={}, weight_decay=1e-3, img_types=(mods[3], mods[2]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.1, optim_params={}, weight_decay=1e-3, img_types=(mods[0], mods[-1]), label_smoothing=0.0)
 ]
 
 
