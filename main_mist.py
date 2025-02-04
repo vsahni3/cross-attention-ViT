@@ -7,8 +7,7 @@ from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers.tensorboard import TensorBoardLogger
 from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 from torch.utils.data.distributed import DistributedSampler 
-import config
-from config import modify_config
+from config2 import modify_config, get_mgmt_config
 import pandas as pd
 from sklearn.model_selection import train_test_split
 import torch.nn as nn
@@ -20,7 +19,7 @@ from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 
 # DIM / IMAGE SIZE ONLY 128 MAYBE UPSCALE IF NEEDED
 # Load configuration
-config = config.get_mgmt_config()
+config = get_mgmt_config()
 
 
 file_path = '/scratch/p/ptyrrell/vsahni3'
