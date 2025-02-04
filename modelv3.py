@@ -93,6 +93,7 @@ class Model(L.LightningModule):
         self.patch_size = config.patch_size
         self.lr = config.lr
         self.weight_decay = config.weight_decay
+        self.optim_params = config.optim_params
 
         self.pos_embedding = nn.Parameter(torch.randn(1, num_patches + 1, config.hidden_dim))
         self.patch_to_embedding = nn.Linear(patch_dim, config.hidden_dim)
@@ -173,14 +174,14 @@ class Model(L.LightningModule):
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer, mode="min", factor=self.optimizer_params['factor'], patience=self.optimizer_params['patience']
+            optimizer, mode="min", factor=self.optim_params['factor'], patience=self.optim_params['patience']
         )
         
         return {
             "optimizer": optimizer,
             "lr_scheduler": {
                 "scheduler": scheduler,
-                "monitor": self.optimizer_params['type']
+                "monitor": self.optim_params['type']
             },
         }
 
