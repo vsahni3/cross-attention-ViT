@@ -32,13 +32,13 @@ checkpoint_callback = ModelCheckpoint(
    mode="min",
 )
 
-early_stop_callback = EarlyStopping(
-    monitor="val_loss",  # metric name to monitor
-    min_delta=0.00,      # minimum change in the monitored metric to be considered an improvement
-    patience=25,          # number of epochs with no improvement after which training will be stopped
-    verbose=True,        # whether to print messages when stopping early
-    mode="min"           # mode "min" because we want the loss to be as low as possible
-)
+# early_stop_callback = EarlyStopping(
+#     monitor="val_loss",  # metric name to monitor
+#     min_delta=0.00,      # minimum change in the monitored metric to be considered an improvement
+#     patience=25,          # number of epochs with no improvement after which training will be stopped
+#     verbose=True,        # whether to print messages when stopping early
+#     mode="min"           # mode "min" because we want the loss to be as low as possible
+# )
 
 
 
@@ -116,7 +116,7 @@ for params in params_list:
     logger=logger,
     devices=4,
     num_nodes=2,
-    callbacks=[checkpoint_callback, early_stop_callback]
+    callbacks=[checkpoint_callback]
     )
     trainer.fit(model, train_loader, val_loader)
 
