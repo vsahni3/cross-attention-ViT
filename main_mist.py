@@ -12,7 +12,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 import torch.nn as nn
 from collections import namedtuple
-from pytorch_lightning.callbacks.early_stopping import EarlyStopping
+from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 
 
 
