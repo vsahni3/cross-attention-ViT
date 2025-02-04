@@ -96,8 +96,8 @@ for params in params_list:
     val_df, test_df = train_test_split(tmp_df, test_size=0.5, random_state=6969)
 
 
-    train_dataset = BrainDataset(data=train_df, is_train=True, types=params.img_types)
-    val_dataset = BrainDataset(data=val_df, is_train=False, types=params.img_types)
+    train_dataset = BrainDataset(config=config, data=train_df, is_train=True, types=params.img_types)
+    val_dataset = BrainDataset(config=config, data=val_df, is_train=False, types=params.img_types)
 
 
     # test_dataset = BrainDataset(data=test_df, is_train=False)

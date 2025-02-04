@@ -58,10 +58,7 @@ from sklearn.model_selection import train_test_split
 import pandas as pd 
 
 import copy
-import config
 
-# Load configuration
-config = config.get_mgmt_config()
 
 
 
@@ -74,8 +71,8 @@ config = config.get_mgmt_config()
 # # Maybe not your case.
 
 class BrainDataset(Dataset):
-    def __init__(self, data, target=config.target, types=("T1c", "T2"), is_train=True, folder='ucsf-data'):
-        self.target = target
+    def __init__(self, data, config, types=("T1c", "T2"), is_train=True, folder='ucsf-data'):
+        self.target = config.target
         self.data = data
         self.types = types
         self.is_train = is_train
@@ -86,11 +83,11 @@ class BrainDataset(Dataset):
                     LoadImaged(keys=["image"],reader='nibabelreader'),
                     EnsureChannelFirstd(keys=["image"], channel_dim="no_channel"),
                     Orientationd(keys=["image"], axcodes="RAS"),
-                    Spacingd(
-                        keys=["image"],
-                        pixdim=config.spacing,
-                        mode=("bilinear"),
-                    ),
+                    # Spacingd(
+                    #     keys=["image"],
+                    #     pixdim=config.spacing,
+                    #     mode=("bilinear"),
+                    # ),
                     # CropForegroundd(keys=["image"], source_key="image", allow_smaller=True),
                     ScaleIntensityd(keys=["image"], minv=-1.0, maxv=1.0),
                     ResizeWithPadOrCropd(
@@ -111,11 +108,11 @@ class BrainDataset(Dataset):
                     LoadImaged(keys=["image"],reader='nibabelreader'),
                     EnsureChannelFirstd(keys=["image"], channel_dim="no_channel"),
                     Orientationd(keys=["image"], axcodes="RAS"),
-                    Spacingd(
-                        keys=["image"],
-                        pixdim=config.spacing,
-                        mode=("bilinear"),
-                    ),
+                    # Spacingd(
+                    #     keys=["image"],
+                    #     pixdim=config.spacing,
+                    #     mode=("bilinear"),
+                    # ),
                     # CropForegroundd(keys=["image"], source_key="image", allow_smaller=True),
                     ScaleIntensityd(keys=["image"], minv=-1.0, maxv=1.0),
                     ResizeWithPadOrCropd(
