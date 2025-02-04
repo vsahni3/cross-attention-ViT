@@ -105,8 +105,8 @@ for params in params_list:
 
 
 
-    train_loader = DataLoader(train_dataset, batch_size=12, num_workers=5, sampler=sampler)
-    val_loader = DataLoader(val_dataset, batch_size=12, shuffle=False, num_workers=5)
+    train_loader = DataLoader(train_dataset, batch_size=8, num_workers=5, sampler=sampler)
+    val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False, num_workers=5)
     # test_loader = DataLoader(test_dataset, batch_size=12, shuffle=False, num_workers=5)
 
     torch.cuda.empty_cache()
