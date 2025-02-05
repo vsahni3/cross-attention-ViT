@@ -78,7 +78,8 @@ params_list = [
 
 
 for params in params_list:
-    logger = TensorBoardLogger(save_dir=f"{file_path}/lightning_logs", name=f"vit_model_{params_list}")
+    name = f'{params.img_types} {params.drop_path} cosine more image aug'
+    logger = TensorBoardLogger(save_dir=f"{file_path}/lightning_logs", name=f"vit_model_{name}")
 
     config = modify_config(config, params)
     config = modify_config(config, {'num_modalities': len(params.img_types)})
