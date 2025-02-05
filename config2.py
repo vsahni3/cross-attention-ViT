@@ -6,7 +6,7 @@ def get_mgmt_config():
     config.mlp_dim = 4096
     config.num_heads = 16
     config.num_layers = 4
-    config.patch_size = (32, 16, 16)
+    config.patch_size = (16, 16, 8)
 
     config.conv_first_channel = 512
     config.encoder_channels = (16, 32, 64)
@@ -15,7 +15,7 @@ def get_mgmt_config():
 
 
     config.num_classes = 2
-    config.img_size = (256, 256, 128)
+    config.img_size = (128, 128, 64)
     config.in_channels = 1
     config.spacing = (2, 2, 2)
 

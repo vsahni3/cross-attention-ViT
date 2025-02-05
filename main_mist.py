@@ -69,16 +69,13 @@ Params = namedtuple("Params", ["lr", "dropout", "drop_path", "optim_params", "we
 mods = ['DWI', 'SWI', 'T1c', 'brain_parenchyma_segmentation', 'tumor_segmentation', 'T2', 'ADC', 'ASL']
 params_list = [
     Params(lr=1e-4, dropout=0.1, drop_path=0.0, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[1], mods[2]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.1, drop_path=0.0, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[2]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.1, drop_path=0.0, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[3], mods[2]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.1, drop_path=0.1, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[1], mods[2]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.1, drop_path=0.1, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[2]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.1, drop_path=0.1, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[3], mods[2]), label_smoothing=0.0)
+    Params(lr=1e-4, dropout=0.1, drop_path=0.0, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[1], mods[0]), label_smoothing=0.0),
+
 ]
 
 
 for params in params_list:
-    name = f'{params.img_types} {params.drop_path} cosine more image aug'
+    name = f'{params.img_types} {params.drop_path} cosine more aug'
     logger = TensorBoardLogger(save_dir=f"{file_path}/lightning_logs", name=f"vit_model_{name}")
 
     config = modify_config(config, params)
@@ -91,12 +88,12 @@ for params in params_list:
     data = clean_data(data, config.target)
 
 
-    train_df, tmp_df = train_test_split(data, test_size=0.3, random_state=6969)
+    train_df, tmp_df = train_test_split(data, test_size=0.3, random_state=3504)
     sampler = create_sampler(train_df)
 
     
 
-    val_df, test_df = train_test_split(tmp_df, test_size=0.5, random_state=6969)
+    val_df, test_df = train_test_split(tmp_df, test_size=0.5, random_state=3504)
 
 
     train_dataset = BrainDataset(config=config, data=train_df, is_train=True, types=params.img_types)
