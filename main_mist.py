@@ -60,7 +60,7 @@ def create_sampler(train_df):
 # Instantiate the model
 
 # model.apply(reset_weights)
-Params = namedtuple("Params", ["lr", "dropout", "optim_params", "weight_decay", "img_types", "label_smoothing"])
+Params = namedtuple("Params", ["lr", "dropout", "drop_path", "optim_params", "weight_decay", "img_types", "label_smoothing"])
 # label smoothing
 # stochatsic depth
 # precision affects
@@ -68,15 +68,19 @@ Params = namedtuple("Params", ["lr", "dropout", "optim_params", "weight_decay", 
 #AJWIDNWEFNIEFNEOJFKEFMEMFE
 mods = ['DWI', 'SWI', 'T1c', 'brain_parenchyma_segmentation', 'tumor_segmentation', 'T2', 'ADC', 'ASL']
 params_list = [
-    Params(lr=1e-4, dropout=0.1, optim_params={'factor': 0.5, 'patience': 25, 'type': 'val_loss'}, weight_decay=5e-4, img_types=(mods[1], mods[2]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.1, optim_params={'factor': 0.25, 'patience': 25, 'type': 'val_loss'}, weight_decay=5e-4, img_types=(mods[0], mods[2]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.1, optim_params={'factor': 0.1, 'patience': 25, 'type': 'val_loss'}, weight_decay=5e-4, img_types=(mods[3], mods[2]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.1, drop_path=0.0, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[1], mods[2]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.1, drop_path=0.0, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[2]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.1, drop_path=0.0, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[3], mods[2]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.1, drop_path=0.0, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[-3], mods[2]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.1, drop_path=0.1, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[1], mods[2]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.1, drop_path=0.1, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[2]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.1, drop_path=0.1, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[3], mods[2]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.1, drop_path=0.1, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[-3], mods[2]), label_smoothing=0.0)
 ]
 
 
 for params in params_list:
-    params_title = f'{params.lr} {params.dropout} {params.optim_params} {params.weight_decay} {params.img_types} {params.label_smoothing}'
-    logger = TensorBoardLogger(save_dir=f"{file_path}/lightning_logs", name=f"vit_model_{params_title}")
+    logger = TensorBoardLogger(save_dir=f"{file_path}/lightning_logs", name=f"vit_model_{params_list}")
 
     config = modify_config(config, params)
     config = modify_config(config, {'num_modalities': len(params.img_types)})

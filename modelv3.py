@@ -7,6 +7,7 @@ import lightning as L
 import ml_collections
 import torchmetrics
 from utils import compute_metrics
+from torchvision.ops import StochasticDepth
 # helpers
 
 def pair(t):
@@ -69,16 +70,21 @@ class Transformer(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.layers = nn.ModuleList([])
-        for _ in range(config.num_layers):
-          
+            
+        drop_path_rates = torch.linspace(0, config.drop_path, config.num_layers).tolist()
+        
+        # if we use same droppath for both they share whether being dropped or not at same time
+        for drop_path_rate in drop_path_rates:
             self.layers.append(nn.ModuleList([
                 PreNorm(config, Attention(config, dim_head=(config.hidden_dim // config.num_heads))),
-                PreNorm(config, FeedForward(config))
+                StochasticDepth(drop_path_rate, mode="row"),  # DropPath for MHA
+                PreNorm(config, FeedForward(config)),
+                StochasticDepth(drop_path_rate, mode="row"),  # DropPath for FFN
             ]))
     def forward(self, x):
-        for attn, ff in self.layers:
-            x = attn(x) + x
-            x = ff(x) + x
+        for attn, drop_path_attn, ff, drop_path_ff in self.layers:
+            x = drop_path_attn(attn(x)) + x
+            x = drop_path_ff(ff(x)) + x
         return x
 
 class Model(L.LightningModule):
@@ -88,6 +94,7 @@ class Model(L.LightningModule):
         D, H, W = config.img_size
         dp, hp, wp = config.patch_size
         num_patches = (D // dp) * (H // hp) * (W // wp) * config.num_modalities
+
         patch_dim = dp * hp * wp
 
         self.patch_size = config.patch_size
@@ -127,7 +134,7 @@ class Model(L.LightningModule):
         cls_tokens = self.cls_token.expand(img.shape[0], -1, -1)
         
         x = torch.cat((cls_tokens, x), dim=1)
-      
+
         x += self.pos_embedding
         x = self.dropout(x)
 
@@ -173,15 +180,33 @@ class Model(L.LightningModule):
         
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer, mode="min", factor=self.optim_params['factor'], patience=self.optim_params['patience']
+
+        # note uses half cycle
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer,
+            T_max=self.optim_params["T_max"],  # Number of epochs before stop decaying
+            eta_min=self.optim_params["eta_min"]  # Minimum learning rate
         )
-        
+
         return {
             "optimizer": optimizer,
             "lr_scheduler": {
                 "scheduler": scheduler,
-                "monitor": self.optim_params['type']
-            },
+                "interval": "epoch" 
+            }
         }
+        
+    # def configure_optimizers(self):
+    #     optimizer = torch.optim.Adam(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
+    #     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+    #         optimizer, mode="min", factor=self.optim_params['factor'], patience=self.optim_params['patience']
+    #     )
+        
+    #     return {
+    #         "optimizer": optimizer,
+    #         "lr_scheduler": {
+    #             "scheduler": scheduler,
+    #             "monitor": self.optim_params['type']
+    #         },
+    #     }
 
