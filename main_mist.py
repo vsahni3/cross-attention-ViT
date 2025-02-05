@@ -71,11 +71,9 @@ params_list = [
     Params(lr=1e-4, dropout=0.1, drop_path=0.0, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[1], mods[2]), label_smoothing=0.0),
     Params(lr=1e-4, dropout=0.1, drop_path=0.0, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[2]), label_smoothing=0.0),
     Params(lr=1e-4, dropout=0.1, drop_path=0.0, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[3], mods[2]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.1, drop_path=0.0, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[-3], mods[2]), label_smoothing=0.0),
     Params(lr=1e-4, dropout=0.1, drop_path=0.1, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[1], mods[2]), label_smoothing=0.0),
     Params(lr=1e-4, dropout=0.1, drop_path=0.1, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[2]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.1, drop_path=0.1, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[3], mods[2]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.1, drop_path=0.1, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[-3], mods[2]), label_smoothing=0.0)
+    Params(lr=1e-4, dropout=0.1, drop_path=0.1, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[3], mods[2]), label_smoothing=0.0)
 ]
 
 
