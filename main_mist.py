@@ -66,16 +66,17 @@ Params = namedtuple("Params", ["lr", "dropout", "drop_path", "optim_params", "we
 mods = ['DWI', 'SWI', 'T1c', 'brain_parenchyma_segmentation', 'tumor_segmentation', 'T2', 'ADC', 'ASL']
 params_list = [
     Params(lr=1e-4, dropout=0.1, drop_path=0.0, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[1], mods[0]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.11, drop_path=0.0, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[1], mods[0]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.1, drop_path=0.0, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=1e-3, img_types=(mods[1], mods[0]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.1, drop_path=0.0, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[1], mods[0]), label_smoothing=0.0),
     Params(lr=1e-4, dropout=0.1, drop_path=0.0, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[1], mods[0]), label_smoothing=0.1),
-    Params(lr=1e-4, dropout=0.1, drop_path=0.0, optim_params={"T_max": 150, "eta_min": 1e-7}, weight_decay=1e-3, img_types=(mods[1], mods[0]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.0, drop_path=0.0, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=1e-3, img_types=(mods[1], mods[0]), label_smoothing=0.1),
-    Params(lr=1e-4, dropout=0.0, drop_path=0.0, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=1e-3, img_types=(mods[1], mods[0]), label_smoothing=0.0)
-
+    Params(lr=1e-4, dropout=0.1, drop_path=0.0, optim_params={"T_max": 150, "eta_min": 1e-7}, weight_decay=5e-4, img_types=(mods[1], mods[0]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.1, drop_path=0.0, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[1], mods[0]), label_smoothing=0.15)
 ]
 
-run = 10
+with open('run.txt', 'r') as f:
+    run = int(f.read())
+with open('run.txt', 'w') as f:
+    f.write(str(run + 1))
+
 for i, params in enumerate(params_list):
     checkpoint_callback = ModelCheckpoint(
         dirpath=f"{file_path}/checkpoints",           # Directory to save checkpoints
