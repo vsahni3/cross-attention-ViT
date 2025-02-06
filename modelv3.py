@@ -119,6 +119,7 @@ class Model(L.LightningModule):
             nn.Linear(config.mlp_dim, config.num_classes),
             nn.Dropout(config.dropout)
         )
+        self.initialize_model()
     def forward(self, img, labels):
 
         dp, hp, wp = self.patch_size
@@ -144,6 +145,35 @@ class Model(L.LightningModule):
         x = self.mlp_head(x)
         loss = F.cross_entropy(x, labels)
         return x, loss
+    
+    @staticmethod
+    def init_weights(module):
+        """
+        Custom weight initialization for Linear and LayerNorm layers.
+        """
+        if isinstance(module, nn.Linear):
+            # Use Xavier Uniform initialization for Linear layers
+            nn.init.xavier_uniform_(module.weight)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.LayerNorm):
+            # Initialize LayerNorm layers: weight=1, bias=0
+            nn.init.ones_(module.weight)
+            nn.init.zeros_(module.bias)
+
+    def initialize_model(self):
+        """
+        Apply weight initialization to all submodules and reinitialize
+        the positional embeddings and class token.
+        """
+        # Initialize modules (Linear, LayerNorm, etc.)
+        self.apply(Model.init_weights)
+        
+        # Reinitialize parameters that were defined as nn.Parameter
+        if hasattr(self, 'pos_embedding'):
+            nn.init.normal_(self.pos_embedding, mean=0.0, std=0.02)
+        if hasattr(self, 'cls_token'):
+            nn.init.normal_(self.cls_token, mean=0.0, std=0.02)
     
     def log_stats(self, name, logits, labels):
         pred = torch.argmax(logits, dim=1)
