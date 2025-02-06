@@ -25,11 +25,18 @@ config = get_mgmt_config()
 file_path = '/scratch/p/ptyrrell/vsahni3'
 # Callbacks
 checkpoint_callback = ModelCheckpoint(
-   dirpath=f"{file_path}/checkpoints",
-   monitor="train_loss",
-   filename="vit-{epoch:02d}",
-   save_top_k=3,
-   mode="min",
+    dirpath=f"{file_path}/checkpoints",           # Directory to save checkpoints
+    monitor="val_auc_roc",           # Monitor validation AUC-ROC score
+    filename="vit-{epoch:02d}-{val_auc_roc:.4f}",  # Save filename with AUC-ROC value
+    save_top_k=5,                    # Keep the top 3 best models
+    mode="max",                       # Save when val_auc_roc is **maximized**
+)
+
+fixed_epoch_checkpoint = ModelCheckpoint(
+    dirpath=f"{file_path}/checkpoints/fixed_epochs",
+    filename="vit-fixed-{epoch:02d}",
+    every_n_epochs=50,  # Save every 50 epochs
+    save_top_k=-1,  # Save all models at these epochs
 )
 
 # early_stop_callback = EarlyStopping(
@@ -68,8 +75,8 @@ Params = namedtuple("Params", ["lr", "dropout", "drop_path", "optim_params", "we
 #AJWIDNWEFNIEFNEOJFKEFMEMFE
 mods = ['DWI', 'SWI', 'T1c', 'brain_parenchyma_segmentation', 'tumor_segmentation', 'T2', 'ADC', 'ASL']
 params_list = [
-    Params(lr=1e-4, dropout=0.1, drop_path=0.0, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[1], mods[2]), label_smoothing=0.0),
     Params(lr=1e-4, dropout=0.1, drop_path=0.0, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[1], mods[0]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.1, drop_path=0.0, optim_params={"T_max": 100, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[1], mods[0]), label_smoothing=0.0)
 
 ]
 
