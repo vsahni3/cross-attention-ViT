@@ -145,8 +145,7 @@ class Model(L.LightningModule):
         loss = F.cross_entropy(x, labels)
         return x, loss
     
-    def log_stats(self, is_train, logits, labels):
-        name = 'train' if is_train else 'val'
+    def log_stats(self, name, logits, labels):
         pred = torch.argmax(logits, dim=1)
         metrics = compute_metrics(pred, labels)
         self.log(f'{name}_acc', metrics['accuracy'], on_epoch=True, on_step=False, sync_dist=True)
@@ -154,6 +153,7 @@ class Model(L.LightningModule):
         self.log(f'{name}_rec', metrics['recall'], on_epoch=True, on_step=False, sync_dist=True)
         self.log(f'{name}_spec', metrics['specificity'], on_epoch=True, on_step=False, sync_dist=True)
         self.log(f'{name}_f1', metrics['f1_score'], on_epoch=True, on_step=False, sync_dist=True)
+        self.log(f'{name}_npv', metrics['npv'], on_epoch=True, on_step=False, sync_dist=True)
 
         prob = torch.nn.functional.softmax(logits, dim=1)[:, 1]
         auroc = torchmetrics.functional.auroc(prob, labels, task="binary")
@@ -168,7 +168,7 @@ class Model(L.LightningModule):
 
         
         self.log('train_loss', loss, on_epoch=True, on_step=False, sync_dist=True)
-        self.log_stats(True, logits, labels)
+        self.log_stats('train', logits, labels)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -176,7 +176,7 @@ class Model(L.LightningModule):
         logits, loss = self(x, labels)
 
         self.log('val_loss', loss, on_epoch=True, on_step=False, sync_dist=True)
-        self.log_stats(False, logits, labels)
+        self.log_stats('val', logits, labels)
         
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
@@ -195,6 +195,13 @@ class Model(L.LightningModule):
                 "interval": "epoch" 
             }
         }
+        
+    def test_step(self, batch, batch_idx):
+        x, labels = batch
+        logits, loss = self(x, labels)
+
+        self.log('test_loss', loss, on_epoch=True, on_step=False)
+        self.log_stats('test', logits, labels)
         
     # def configure_optimizers(self):
     #     optimizer = torch.optim.Adam(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
