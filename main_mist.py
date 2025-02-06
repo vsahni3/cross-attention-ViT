@@ -24,20 +24,7 @@ config = get_mgmt_config()
 
 file_path = '/scratch/p/ptyrrell/vsahni3'
 # Callbacks
-checkpoint_callback = ModelCheckpoint(
-    dirpath=f"{file_path}/checkpoints",           # Directory to save checkpoints
-    monitor="val_auc_roc",           # Monitor validation AUC-ROC score
-    filename="vit-{epoch:02d}-{val_auc_roc:.4f}",  # Save filename with AUC-ROC value
-    save_top_k=5,                    # Keep the top 3 best models
-    mode="max",                       # Save when val_auc_roc is **maximized**
-)
 
-fixed_epoch_checkpoint = ModelCheckpoint(
-    dirpath=f"{file_path}/checkpoints/fixed_epochs",
-    filename="vit-fixed-{epoch:02d}",
-    every_n_epochs=50,  # Save every 50 epochs
-    save_top_k=-1,  # Save all models at these epochs
-)
 
 # early_stop_callback = EarlyStopping(
 #     monitor="val_loss",  # metric name to monitor
@@ -76,14 +63,33 @@ Params = namedtuple("Params", ["lr", "dropout", "drop_path", "optim_params", "we
 mods = ['DWI', 'SWI', 'T1c', 'brain_parenchyma_segmentation', 'tumor_segmentation', 'T2', 'ADC', 'ASL']
 params_list = [
     Params(lr=1e-4, dropout=0.1, drop_path=0.0, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[1], mods[0]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.1, drop_path=0.0, optim_params={"T_max": 100, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[1], mods[0]), label_smoothing=0.0)
+    Params(lr=1e-4, dropout=0.11, drop_path=0.0, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[1], mods[0]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.1, drop_path=0.0, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=1e-3, img_types=(mods[1], mods[0]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.1, drop_path=0.0, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[1], mods[0]), label_smoothing=0.1),
+    Params(lr=1e-4, dropout=0.1, drop_path=0.0, optim_params={"T_max": 150, "eta_min": 1e-7}, weight_decay=1e-3, img_types=(mods[1], mods[0]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.0, drop_path=0.0, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=1e-3, img_types=(mods[1], mods[0]), label_smoothing=0.1),
+    Params(lr=1e-4, dropout=0.0, drop_path=0.0, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=1e-3, img_types=(mods[1], mods[0]), label_smoothing=0.0)
+
 
 ]
 
+run = 10
+for i, params in enumerate(params_list):
+    checkpoint_callback = ModelCheckpoint(
+        dirpath=f"{file_path}/checkpoints",           # Directory to save checkpoints
+        monitor="val_auc_roc",           # Monitor validation AUC-ROC score
+        filename="vit-{epoch:02d}-{val_auc_roc:.4f}" + f'_{run}_{i}',  # Save filename with AUC-ROC value
+        save_top_k=5,                    # Keep the top 3 best models
+        mode="max",                       # Save when val_auc_roc is **maximized**
+    )
 
-for params in params_list:
-    name = f'{params.img_types} {params.drop_path} cosine more aug'
-    logger = TensorBoardLogger(save_dir=f"{file_path}/lightning_logs", name=f"vit_model_{name}")
+    fixed_epoch_checkpoint = ModelCheckpoint(
+        dirpath=f"{file_path}/checkpoints",
+        filename="vit-fixed-{epoch:02d}" + f'_{run}_{i}',
+        every_n_epochs=50,  # Save every 50 epochs
+        save_top_k=-1,  # Save all models at these epochs
+    )
+    logger = TensorBoardLogger(save_dir=f"{file_path}/lightning_logs", name=f"vit_model_{run}_{i}")
 
     config = modify_config(config, params)
     config = modify_config(config, {'num_modalities': len(params.img_types)})
@@ -106,15 +112,14 @@ for params in params_list:
     train_dataset = BrainDataset(config=config, data=train_df, is_train=True, types=params.img_types)
     val_dataset = BrainDataset(config=config, data=val_df, is_train=False, types=params.img_types)
 
-
-    # test_dataset = BrainDataset(data=test_df, is_train=False)
+    test_dataset = BrainDataset(config=config, data=val_df, is_train=False, types=params.img_types)
 
 
 
 
     train_loader = DataLoader(train_dataset, batch_size=8, num_workers=5, sampler=sampler)
     val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False, num_workers=5)
-    # test_loader = DataLoader(test_dataset, batch_size=12, shuffle=False, num_workers=5)
+    test_loader = DataLoader(test_dataset, batch_size=8, shuffle=False, num_workers=5)
 
     torch.cuda.empty_cache()
     trainer = L.Trainer(
@@ -123,11 +128,53 @@ for params in params_list:
     logger=logger,
     devices=4,
     num_nodes=2,
-    callbacks=[checkpoint_callback]
+    callbacks=[checkpoint_callback, fixed_epoch_checkpoint]
     )
     trainer.fit(model, train_loader, val_loader)
 
 
+def test(params):
+    for file in os.listdir('checkpoints'):
+        if 'epoch' not in file:
+            continue 
+
+
+
+        config = modify_config(config, params)
+        config = modify_config(config, {'num_modalities': len(params.img_types)})
+
+        model = Model.load_from_checkpoint(f'checkpoints/{file}', config=config)
+
+
+
+        data = pd.read_csv("labels.csv")
+        data = clean_data(data, config.target)
+
+
+        train_df, tmp_df = train_test_split(data, test_size=0.3, random_state=3504)
+
+
+        
+
+        val_df, test_df = train_test_split(tmp_df, test_size=0.5, random_state=3504)
+
+
+
+
+
+
+        test_dataset = BrainDataset(config=config, data=val_df, is_train=False, types=params.img_types)
+
+        test_loader = DataLoader(test_dataset, batch_size=8, shuffle=False, num_workers=5)
+
+        torch.cuda.empty_cache()
+        trainer = L.Trainer(
+        max_epochs=250,
+        accelerator="auto"
+        )
+        # trainer.fit(model, train_loader, val_loader)
+        trainer.test(model, test_loader)
+    
 
 
 
