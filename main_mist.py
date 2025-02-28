@@ -1,5 +1,5 @@
 from dataset_ucsf import BrainDataset, clean_data
-from modelv3 import Model
+from model_cross import Model
 from torch.utils.data import DataLoader, random_split, WeightedRandomSampler
 import torch
 import lightning as L
@@ -13,7 +13,7 @@ from sklearn.model_selection import train_test_split
 import torch.nn as nn
 from collections import namedtuple
 from lightning.pytorch.callbacks.early_stopping import EarlyStopping
-
+import os
 
 
 
@@ -57,7 +57,7 @@ def create_sampler(train_df):
 # Instantiate the model
 
 # model.apply(reset_weights)
-Params = namedtuple("Params", ["lr", "dropout", "drop_path", "optim_params", "weight_decay", "img_types", "label_smoothing"])
+Params = namedtuple("Params", ["lr", "dropout", "attn_order", "optim_params", "weight_decay", "img_types", "label_smoothing"])
 # label smoothing
 # stochatsic depth
 # precision affects
@@ -65,78 +65,85 @@ Params = namedtuple("Params", ["lr", "dropout", "drop_path", "optim_params", "we
 #AJWIDNWEFNIEFNEOJFKEFMEMFE
 mods = ['DWI', 'SWI', 'T1c', 'brain_parenchyma_segmentation', 'tumor_segmentation', 'T2', 'ADC', 'ASL']
 params_list = [
-    Params(lr=1e-4, dropout=0.1, drop_path=0.0, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[1], mods[0]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.1, drop_path=0.0, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[1], mods[0]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.1, drop_path=0.0, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[1], mods[0]), label_smoothing=0.1),
-    Params(lr=1e-4, dropout=0.1, drop_path=0.0, optim_params={"T_max": 150, "eta_min": 1e-7}, weight_decay=5e-4, img_types=(mods[1], mods[0]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.1, drop_path=0.0, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[1], mods[0]), label_smoothing=0.15)
+    Params(lr=1e-4, dropout=0.1, attn_order = [(0, 1), (1, 0)], optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[1], mods[0]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.1, attn_order = [(0, 1), (1, 0)], optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[2], mods[5]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.1, attn_order = [(0, 1), (1, 0)], optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[1], mods[2]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.1, attn_order = [(0, 1), (1, 0)], optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[2]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.1, attn_order = [(0, 1), (1, 0)], optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[3], mods[4]), label_smoothing=0.0)
 ]
 
-with open('run.txt', 'r') as f:
-    run = int(f.read())
-with open('run.txt', 'w') as f:
-    f.write(str(run + 1))
 
-for i, params in enumerate(params_list):
-    checkpoint_callback = ModelCheckpoint(
-        dirpath=f"{file_path}/checkpoints",           # Directory to save checkpoints
-        monitor="val_auc_roc",           # Monitor validation AUC-ROC score
-        filename="vit-{epoch:02d}-{val_auc_roc:.4f}" + f'_{run}_{i}',  # Save filename with AUC-ROC value
-        save_top_k=5,                    # Keep the top 3 best models
-        mode="max",                       # Save when val_auc_roc is **maximized**
-    )
+def train():
+    config = get_mgmt_config()
+    with open('run.txt', 'r') as f:
+        run = int(f.read())
+    with open('run.txt', 'w') as f:
+        f.write(str(run + 1))
+    for i, params in enumerate(params_list):
+        checkpoint_callback = ModelCheckpoint(
+            dirpath=f"{file_path}/checkpoints/cross",           
+            monitor="val_auc_roc",          
+            filename="{epoch:02d}-{val_auc_roc:.4f}" + f'_{run}_{i}', 
+            save_top_k=5,                   
+            mode="max",                      
+        )
 
-    fixed_epoch_checkpoint = ModelCheckpoint(
-        dirpath=f"{file_path}/checkpoints",
-        filename="vit-fixed-{epoch:02d}" + f'_{run}_{i}',
-        every_n_epochs=50,  # Save every 50 epochs
-        save_top_k=-1,  # Save all models at these epochs
-    )
-    logger = TensorBoardLogger(save_dir=f"{file_path}/lightning_logs", name=f"vit_model_{run}_{i}")
+        # fixed_epoch_checkpoint = ModelCheckpoint(
+        #     dirpath=f"{file_path}/checkpoints/cross",
+        #     filename="{epoch:02d}" + f'_{run}_{i}',
+        #     every_n_epochs=50,  # Save every 50 epochs
+        #     save_top_k=-1,  # Save all models at these epochs
+        # )
+        logger = TensorBoardLogger(save_dir=f"{file_path}/lightning_logs/cross", name=f"{run}_{i}")
 
-    config = modify_config(config, params)
-    config = modify_config(config, {'num_modalities': len(params.img_types)})
-    model = Model(config)
-
-
-
-    data = pd.read_csv("labels.csv")
-    data = clean_data(data, config.target)
+        config = modify_config(config, params)
+        config = modify_config(config, {'num_modalities': len(params.img_types)})
+        model = Model(config)
+        
 
 
-    train_df, tmp_df = train_test_split(data, test_size=0.3, random_state=3504)
-    sampler = create_sampler(train_df)
 
+        data = pd.read_csv("labels.csv")
+
+        data = clean_data(data, config.target)
+
+
+
+        train_df, tmp_df = train_test_split(data, test_size=0.3, random_state=3504)
+        sampler = create_sampler(train_df)
+
+        
+
+        val_df, test_df = train_test_split(tmp_df, test_size=0.5, random_state=3504)
+
+
+        train_dataset = BrainDataset(config=config, data=train_df, is_train=True, types=params.img_types)
     
+        val_dataset = BrainDataset(config=config, data=val_df, is_train=False, types=params.img_types)
 
-    val_df, test_df = train_test_split(tmp_df, test_size=0.5, random_state=3504)
-
-
-    train_dataset = BrainDataset(config=config, data=train_df, is_train=True, types=params.img_types)
-    val_dataset = BrainDataset(config=config, data=val_df, is_train=False, types=params.img_types)
-
-    test_dataset = BrainDataset(config=config, data=val_df, is_train=False, types=params.img_types)
+        test_dataset = BrainDataset(config=config, data=val_df, is_train=False, types=params.img_types)
 
 
 
 
-    train_loader = DataLoader(train_dataset, batch_size=8, num_workers=5, sampler=sampler)
-    val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False, num_workers=5)
-    test_loader = DataLoader(test_dataset, batch_size=8, shuffle=False, num_workers=5)
+        train_loader = DataLoader(train_dataset, batch_size=8, num_workers=5, sampler=sampler)
+        val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False, num_workers=5)
+        test_loader = DataLoader(test_dataset, batch_size=8, shuffle=False, num_workers=5)
 
-    torch.cuda.empty_cache()
-    trainer = L.Trainer(
-    max_epochs=250,
-    accelerator="auto",
-    logger=logger,
-    devices=4,
-    num_nodes=2,
-    callbacks=[checkpoint_callback, fixed_epoch_checkpoint]
-    )
-    trainer.fit(model, train_loader, val_loader)
+        torch.cuda.empty_cache()
+        trainer = L.Trainer(
+        max_epochs=250,
+        accelerator="auto",
+        logger=logger,
+        devices=4,
+        num_nodes=2,
+        callbacks=[checkpoint_callback]
+        )
+        trainer.fit(model, train_loader, val_loader)
 
 
 def test(params):
+    config = get_mgmt_config()
     for file in os.listdir('checkpoints'):
         if 'epoch' not in file:
             continue 
@@ -167,6 +174,8 @@ def test(params):
 
 
         test_dataset = BrainDataset(config=config, data=val_df, is_train=False, types=params.img_types)
+        print(len(test_dataset))
+        fefe
 
         test_loader = DataLoader(test_dataset, batch_size=8, shuffle=False, num_workers=5)
 
@@ -179,5 +188,5 @@ def test(params):
         trainer.test(model, test_loader)
     
 
-
+train()
 

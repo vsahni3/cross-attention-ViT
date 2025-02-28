@@ -48,6 +48,7 @@ class Attention(nn.Module):
         ) if project_out else nn.Identity()
 
     def forward(self, x):
+
         qkv = self.to_qkv(x).chunk(3, dim = -1)
         q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h = self.heads), qkv)
 
@@ -125,6 +126,7 @@ class MultiScaleBlock(nn.Module):
 
 
     def forward(self, x):
+
         attn = [block(x_) for x_, block in zip(x, self.blocks)]
         # only take the cls token out
         # cross attention
@@ -145,7 +147,7 @@ class Model(L.LightningModule):
         assert all(config.img_size[i] % config.patch_size[i] == 0 for i in range(len(config.img_size))), 'image dimensions must be divisible by the patch size'
         D, H, W = config.img_size
         dp, hp, wp = config.patch_size
-        num_patches = (D // dp) * (H // hp) * (W // wp) * config.num_modalities
+        num_patches = (D // dp) * (H // hp) * (W // wp)
 
         patch_dim = dp * hp * wp
 
@@ -153,7 +155,7 @@ class Model(L.LightningModule):
         self.lr = config.lr
         self.weight_decay = config.weight_decay
         self.optim_params = config.optim_params
-
+        self.num_modalities = config.num_modalities
         self.pos_embedding = nn.Parameter(torch.randn(1, num_patches + 1, config.hidden_dim))
         self.patch_to_embedding = nn.Linear(patch_dim, config.hidden_dim)
         self.cls_token = nn.Parameter(torch.randn(1, 1, config.hidden_dim))
@@ -173,12 +175,13 @@ class Model(L.LightningModule):
         ) for _ in range(config.num_modalities)])
         self.initialize_model()
     def forward(self, img, labels):
+        
 
         dp, hp, wp = self.patch_size
         all_tokens = []
         for modality in range(img.shape[1]):
             
-            x = rearrange(img.select(1, modality), 'b c (d p1) (h p2) (w p3) -> b (h w d) (p1 p2 p3 c)', p1 = dp, p2 = hp, p3 = wp)
+            x = rearrange(img.select(1, modality), 'b c (d p1) (h p2) (w p3) -> b (h w d) (p1 p2 p3 c)', p1=dp, p2=hp, p3=wp)
             x = self.patch_to_embedding(x)
             cls_token = self.cls_token.expand(img.shape[0], -1, -1)
             x = torch.cat((cls_token, x), dim=1)
@@ -187,7 +190,7 @@ class Model(L.LightningModule):
           
             all_tokens.append(x)
 
-        x = self.transformer(x)
+        x = self.transformer(all_tokens)
         x = [self.norm[i](x[i]) for i in range(len(x))]
         x = torch.stack([self.mlp_head[i](x[i][:, 0]) for i in range(self.num_modalities)])
         x = torch.mean(x, dim=0)
