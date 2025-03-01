@@ -7,7 +7,7 @@ def get_mgmt_config():
     config.num_heads = 16
     # for vanilla vit
     config.num_layers = 4
-    config.num_multi_blocks = 3
+    config.num_multi_blocks = 2
     config.num_self_blocks = 2
     config.patch_size = (16, 16, 8)
 
