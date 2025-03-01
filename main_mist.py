@@ -66,10 +66,10 @@ Params = namedtuple("Params", ["lr", "dropout", "attn_order", "optim_params", "w
 mods = ['DWI', 'SWI', 'T1c', 'brain_parenchyma_segmentation', 'tumor_segmentation', 'T2', 'ADC', 'ASL']
 params_list = [
     Params(lr=1e-4, dropout=0.1, attn_order = [(0, 1), (1, 0)], optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[1], mods[0]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.1, attn_order = [(0, 1), (1, 0)], optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[2], mods[5]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.1, attn_order = [(0, 1), (1, 0)], optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[1], mods[2]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.1, attn_order = [(0, 1), (1, 0)], optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[2]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.1, attn_order = [(0, 1), (1, 0)], optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[3], mods[4]), label_smoothing=0.0)
+    Params(lr=1e-4, dropout=0.1, attn_order = [(0, 1)], optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[1], mods[0]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.1, attn_order = [(1, 0)], optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[1], mods[0]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.15, attn_order = [(0, 1), (1, 0)], optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[1], mods[0]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.15, attn_order = [(0, 1)], optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[1], mods[0]), label_smoothing=0.0)
 ]
 
 
@@ -104,10 +104,9 @@ def train():
 
 
         data = pd.read_csv("labels.csv")
-
+ 
         data = clean_data(data, config.target)
-
-
+    
 
         train_df, tmp_df = train_test_split(data, test_size=0.3, random_state=3504)
         sampler = create_sampler(train_df)
@@ -174,8 +173,7 @@ def test(params):
 
 
         test_dataset = BrainDataset(config=config, data=val_df, is_train=False, types=params.img_types)
-        print(len(test_dataset))
-        fefe
+     
 
         test_loader = DataLoader(test_dataset, batch_size=8, shuffle=False, num_workers=5)
 
