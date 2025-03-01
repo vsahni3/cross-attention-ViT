@@ -62,11 +62,11 @@ Params = namedtuple("Params", ["lr", "dropout", "attn_order", "optim_params", "w
 #AJWIDNWEFNIEFNEOJFKEFMEMFE
 mods = ['DWI', 'SWI', 'T1c', 'brain_parenchyma_segmentation', 'tumor_segmentation', 'T2', 'ADC', 'ASL']
 params_list = [
-    Params(lr=1e-4, dropout=0.1, attn_order = [(0, 1), (1, 0)], optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[1], mods[0]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.1, attn_order = [(0, 1)], optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[1], mods[0]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.1, attn_order = [(1, 0)], optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[1], mods[0]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.15, attn_order = [(0, 1), (1, 0)], optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[1], mods[0]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.15, attn_order = [(0, 1)], optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[1], mods[0]), label_smoothing=0.0)
+    Params(lr=1e-4, dropout=0.1, attn_order = {0: 1, 1: 0}, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[1], mods[0]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.1, attn_order = {0: 1}, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[1], mods[0]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.1, attn_order = {1: 0}, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[1], mods[0]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.15, attn_order = {0: 1, 1: 0}, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[1], mods[0]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.15, attn_order = {0: 1}, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[1], mods[0]), label_smoothing=0.0)
 ]
 
 
@@ -78,7 +78,7 @@ def train():
         f.write(str(run + 1))
     for i, params in enumerate(params_list):
         checkpoint_callback = ModelCheckpoint(
-            dirpath=f"{file_path}/checkpoints/cross",           
+            dirpath=f"checkpoints/cross",           
             monitor="val_auc_roc",          
             filename="{epoch:02d}-{val_auc_roc:.4f}" + f'_{run}_{i}', 
             save_top_k=5,                   
@@ -91,7 +91,7 @@ def train():
         #     every_n_epochs=50,  # Save every 50 epochs
         #     save_top_k=-1,  # Save all models at these epochs
         # )
-        logger = TensorBoardLogger(save_dir=f"{file_path}/lightning_logs/cross", name=f"{run}_{i}")
+        logger = TensorBoardLogger(save_dir=f"lightning_logs/cross", name=f"{run}_{i}")
 
         config = modify_config(config, params)
         config = modify_config(config, {'num_modalities': len(params.img_types)})
@@ -131,8 +131,8 @@ def train():
         max_epochs=250,
         accelerator="auto",
         logger=logger,
-        devices=4,
-        num_nodes=2,
+        devices=2,
+        num_nodes=1,
         callbacks=[checkpoint_callback]
         )
         trainer.fit(model, train_loader, val_loader)
