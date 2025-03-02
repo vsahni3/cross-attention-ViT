@@ -131,15 +131,17 @@ class MultiScaleBlock(nn.Module):
         # only take the cls token out
         # cross attention
         outs = []
+        cross_count = 0
         for i in range(len(self.blocks)):
             if str(i) in self.attn_order:
                 idx_cls = i
                 idx_tokens = int(self.attn_order[str(idx_cls)])
                 # not using select cuz need to keep outer dim for cat
                 tmp = torch.cat((attn[idx_cls][:, 0:1, ...], attn[idx_tokens][:, 1:, ...]), dim=1)
-                tmp = self.fusion[i](tmp)
+                tmp = self.fusion[cross_count](tmp)
                 tmp = torch.cat((tmp, attn[idx_cls][:, 1:, ...]), dim=1)
                 outs.append(tmp)
+                cross_count += 1
             else:
                 outs.append(attn[i])
         
