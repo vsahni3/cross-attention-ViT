@@ -31,6 +31,10 @@ def modify_config(config, params):
     if not isinstance(params, dict):
         params = params._asdict()
     for key, value in params.items():
-        setattr(config, key, value)
+        print(type(key), key)
+        try:
+            setattr(config, key, value)
+        except Exception:
+            print('\n\nAHHH', key, value)
     
     return config
