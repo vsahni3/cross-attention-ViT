@@ -7,6 +7,7 @@ def get_mgmt_config():
     config.num_heads = 16
     # for vanilla vit
     config.num_layers = 4
+    
     config.num_multi_blocks = 2
     config.num_self_blocks = 2
     config.patch_size = (16, 16, 8)
@@ -31,10 +32,5 @@ def modify_config(config, params):
     if not isinstance(params, dict):
         params = params._asdict()
     for key, value in params.items():
-        print(type(key), key)
-        try:
-            setattr(config, key, value)
-        except Exception:
-            print('\n\nAHHH', key, value)
-    
+        setattr(config, key, value)
     return config
