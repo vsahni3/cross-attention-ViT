@@ -63,11 +63,11 @@ Params = namedtuple("Params", ["lr", "dropout", "attn_order", "optim_params", "w
 mods = ['DWI', 'SWI', 'T1c', 'brain_parenchyma_segmentation', 'tumor_segmentation', 'T2', 'ADC', 'ASL']
 params_list = [
     # have to use str for attn_order otherwise config throws error when setting keys
-    Params(lr=1e-4, dropout=0.25, attn_order={'0': '1', '1': '2', '2': '3', '3': '0'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7], mods[4]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.25, attn_order={'0': '1', '1': '2', '2': '0'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.3, attn_order={'0': '1', '1': '2', '2': '0'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.25, attn_order={'0': '1', '1': '2', '2': '0'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=1e-3, img_types=(mods[0], mods[1], mods[7]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.25, attn_order={'0': '2', '1': '0', '2': '1'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7]), label_smoothing=0.0)
+    Params(lr=1e-4, dropout=0.25, attn_order=[(0, 1), (1, 2), (2, 0)], optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.25, attn_order=[(0, 1), (1, 2), (2, 0), (1, 0)], optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.25, attn_order=[(0, 1), (1, 2), (2, 0), (2, 1)], optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.25, attn_order=[(0, 1), (1, 2), (2, 0), (0, 2)], optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.25, attn_order=[(0, 1), (1, 2), (2, 0), (0, 2), (1, 0), (2, 1)], optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7]), label_smoothing=0.0)
 ]
 
 
@@ -92,7 +92,7 @@ def train():
         #     every_n_epochs=50,  # Save every 50 epochs
         #     save_top_k=-1,  # Save all models at these epochs
         # )
-        logger = TensorBoardLogger(save_dir=f"{file_path}/lightning_logs/cross", name=f"{run}_{i}")
+        logger = TensorBoardLogger(save_dir=f"{file_path}/lightning_logs/cross", name=f"{run}_{i}_aug")
 
         config = modify_config(config, params)
         config = modify_config(config, {'num_modalities': len(params.img_types)})
