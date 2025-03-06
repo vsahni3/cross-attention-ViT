@@ -173,7 +173,7 @@ class Model(L.LightningModule):
             nn.Linear(config.mlp_dim, config.num_classes),
             nn.Dropout(config.dropout)
         ) for _ in range(config.num_modalities)])
-        self.weights = nn.Parameter(torch.ones(self.num_modalities))
+        # self.weights = nn.Parameter(torch.ones(self.num_modalities))
         self.initialize_model()
     def forward(self, img, labels):
         
