@@ -54,7 +54,7 @@ def create_sampler(train_df):
 
 # Instantiate the model
 # model.apply(reset_weights)
-Params = namedtuple("Params", ["lr", "dropout", "attn_order", "optim_params", "weight_decay", "img_types", "label_smoothing"])
+Params = namedtuple("Params", ["lr", "dropout", "attn_order", "optim_params", "weight_decay", "img_types"])
 # label smoothing
 # stochatsic depth
 # precision affects
@@ -63,11 +63,12 @@ Params = namedtuple("Params", ["lr", "dropout", "attn_order", "optim_params", "w
 mods = ['DWI', 'SWI', 'T1c', 'brain_parenchyma_segmentation', 'tumor_segmentation', 'T2', 'ADC', 'ASL']
 params_list = [
     # have to use str for attn_order otherwise config throws error when setting keys
-    Params(lr=1e-4, dropout=0.25, attn_order=[(0, 1), (1, 2), (2, 0)], optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.25, attn_order=[(0, 1), (1, 2), (2, 0), (1, 0)], optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.25, attn_order=[(0, 1), (1, 2), (2, 0), (2, 1)], optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.25, attn_order=[(0, 1), (1, 2), (2, 0), (0, 2)], optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.25, attn_order=[(0, 1), (1, 2), (2, 0), (0, 2), (1, 0), (2, 1)], optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7]), label_smoothing=0.0)
+    Params(lr=1e-4, dropout=0.25, attn_order=[(0, 1), (1, 0)], optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1])),
+    Params(lr=1e-4, dropout=0.25, attn_order=[(0, 1), (1, 2), (2, 0)], optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7])),
+    Params(lr=1e-4, dropout=0.25, attn_order=[(0, 1), (1, 2), (2, 3), (3, 0)], optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7], mods[3])),
+    Params(lr=1e-4, dropout=0.25, attn_order=[(0, 1), (1, 2), (2, 3), (3, 0)], optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7], mods[4])),
+    Params(lr=1e-4, dropout=0.25, attn_order=[(0, 1), (1, 2), (2, 3), (3, 0)], optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[3], mods[4])),
+    Params(lr=1e-4, dropout=0.25, attn_order=[(0, 1), (1, 2), (2, 3), (3, 4), (4, 0)], optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7], mods[3], mods[4]))
 ]
 
 
@@ -123,9 +124,9 @@ def train():
 
 
 
-        train_loader = DataLoader(train_dataset, batch_size=8, num_workers=5, sampler=sampler)
-        val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False, num_workers=5)
-        test_loader = DataLoader(test_dataset, batch_size=8, shuffle=False, num_workers=5)
+        train_loader = DataLoader(train_dataset, batch_size=6, num_workers=5, sampler=sampler)
+        val_loader = DataLoader(val_dataset, batch_size=6, shuffle=False, num_workers=5)
+        test_loader = DataLoader(test_dataset, batch_size=6, shuffle=False, num_workers=5)
 
         torch.cuda.empty_cache()
         trainer = L.Trainer(
