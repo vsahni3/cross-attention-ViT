@@ -93,7 +93,7 @@ def train():
         #     every_n_epochs=50,  # Save every 50 epochs
         #     save_top_k=-1,  # Save all models at these epochs
         # )
-        logger = TensorBoardLogger(save_dir=f"{file_path}/lightning_logs/cross", name=f"{run}_{i}_aug")
+        logger = TensorBoardLogger(save_dir=f"{file_path}/lightning_logs/cross", name=f"{run}_{i}")
 
         config = modify_config(config, params)
         config = modify_config(config, {'num_modalities': len(params.img_types)})

@@ -194,11 +194,10 @@ class Model(L.LightningModule):
         x = self.transformer(all_tokens)
         x = [self.norm[i](x[i]) for i in range(len(x))]
         x = torch.stack([self.mlp_head[i](x[i][:, 0]) for i in range(self.num_modalities)])
-        # B, M, 2
-        x = x.permute(1, 0, 2)
-        weights = F.softmax(self.weights, dim=0)
-        x = weights.view(1, len(weights), 1) * x
-        x = torch.sum(x, dim=1)
+        # M, B, 2
+        # weights = F.softmax(self.weights, dim=0)
+        # x = weights.view(1, len(weights), 1) * x
+        x = torch.mean(x, dim=0)
         loss = F.cross_entropy(x, labels)
         return x, loss
     
