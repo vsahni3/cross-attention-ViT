@@ -181,6 +181,7 @@ class Model(L.LightningModule):
             nn.Linear(config.mlp_dim, config.num_classes),
             nn.Dropout(config.dropout)
         ) for _ in range(config.num_modalities)])
+        self.weights = nn.Parameter(torch.ones(self.num_modalities))
         self.initialize_model()
     def forward(self, img, labels):
         
@@ -200,8 +201,13 @@ class Model(L.LightningModule):
 
         x = self.transformer(all_tokens)
         x = [self.norm[i](x[i]) for i in range(len(x))]
+        # M, B, 2
         x = torch.stack([self.mlp_head[i](x[i][:, 0]) for i in range(self.num_modalities)])
-        x = torch.mean(x, dim=0)
+        
+        weights = F.softmax(self.weights, dim=0)
+        x = weights.view(len(weights), 1, 1) * x
+        x = torch.sum(x, dim=0)
+        # x = torch.mean(x, dim=0)
         loss = F.cross_entropy(x, labels)
         return x, loss
     
