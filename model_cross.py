@@ -1,4 +1,3 @@
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -129,14 +128,23 @@ class MultiScaleBlock(nn.Module):
     def forward(self, x):
 
         attn = [block(x_) for x_, block in zip(x, self.blocks)]
-        outs = [t for t in attn]
-        # cls comes from outs because its getting constantly updated with other modalities
-        # idx_tokens comes from attn, the source of truth which is untainted by other modalities
-        for i, (idx_cls, idx_tokens) in enumerate(self.attn_order):
-            tmp = torch.cat((outs[idx_cls][:, 0:1, ...], attn[idx_tokens][:, 1:, ...]), dim=1)
-            tmp = self.fusion[i](tmp)
-            tmp = torch.cat((tmp, attn[idx_cls][:, 1:, ...]), dim=1)
-            outs[idx_cls] = tmp 
+        # only take the cls token out
+        # cross attention
+        outs = []
+        cross_count = 0
+        for i in range(len(self.blocks)):
+            if str(i) in self.attn_order:
+                idx_cls = i
+                idx_tokens = int(self.attn_order[str(idx_cls)])
+                # not using select cuz need to keep outer dim for cat
+                tmp = torch.cat((attn[idx_cls][:, 0:1, ...], attn[idx_tokens][:, 1:, ...]), dim=1)
+                tmp = self.fusion[cross_count](tmp)
+                tmp = torch.cat((tmp, attn[idx_cls][:, 1:, ...]), dim=1)
+                outs.append(tmp)
+                cross_count += 1
+            else:
+                outs.append(attn[i])
+        
         return outs
     
 
@@ -173,7 +181,6 @@ class Model(L.LightningModule):
             nn.Linear(config.mlp_dim, config.num_classes),
             nn.Dropout(config.dropout)
         ) for _ in range(config.num_modalities)])
-        # self.weights = nn.Parameter(torch.ones(self.num_modalities))
         self.initialize_model()
     def forward(self, img, labels):
         
@@ -194,9 +201,6 @@ class Model(L.LightningModule):
         x = self.transformer(all_tokens)
         x = [self.norm[i](x[i]) for i in range(len(x))]
         x = torch.stack([self.mlp_head[i](x[i][:, 0]) for i in range(self.num_modalities)])
-        # M, B, 2
-        # weights = F.softmax(self.weights, dim=0)
-        # x = weights.view(1, len(weights), 1) * x
         x = torch.mean(x, dim=0)
         loss = F.cross_entropy(x, labels)
         return x, loss

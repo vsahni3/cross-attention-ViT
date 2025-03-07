@@ -34,11 +34,6 @@ file_path = '/scratch/p/ptyrrell/vsahni3'
 #     mode="min"           # mode "min" because we want the loss to be as low as possible
 # )
 
-
-
-
-
-
 def create_sampler(train_df):
     num_negative = len(train_df[train_df[config.target] == 0])
     num_positive = len(train_df) - num_negative
@@ -54,7 +49,7 @@ def create_sampler(train_df):
 
 # Instantiate the model
 # model.apply(reset_weights)
-Params = namedtuple("Params", ["lr", "dropout", "attn_order", "optim_params", "weight_decay", "img_types"])
+Params = namedtuple("Params", ["lr", "dropout", "attn_order", "optim_params", "weight_decay", "img_types", "label_smoothing"])
 # label smoothing
 # stochatsic depth
 # precision affects
@@ -63,12 +58,12 @@ Params = namedtuple("Params", ["lr", "dropout", "attn_order", "optim_params", "w
 mods = ['DWI', 'SWI', 'T1c', 'brain_parenchyma_segmentation', 'tumor_segmentation', 'T2', 'ADC', 'ASL']
 params_list = [
     # have to use str for attn_order otherwise config throws error when setting keys
-    Params(lr=1e-4, dropout=0.25, attn_order=[(0, 1), (1, 0)], optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1])),
-    Params(lr=1e-4, dropout=0.25, attn_order=[(0, 1), (1, 2), (2, 0)], optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7])),
-    Params(lr=1e-4, dropout=0.25, attn_order=[(0, 1), (1, 2), (2, 3), (3, 0)], optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7], mods[3])),
-    Params(lr=1e-4, dropout=0.25, attn_order=[(0, 1), (1, 2), (2, 3), (3, 0)], optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7], mods[4])),
-    Params(lr=1e-4, dropout=0.25, attn_order=[(0, 1), (1, 2), (2, 3), (3, 0)], optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[3], mods[4])),
-    Params(lr=1e-4, dropout=0.25, attn_order=[(0, 1), (1, 2), (2, 3), (3, 4), (4, 0)], optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7], mods[3], mods[4]))
+    Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7], mods[6]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[3], mods[4]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7], mods[3]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7], mods[4]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.25, attn_order={'0': '1', '1': '2'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7]), label_smoothing=0.0)
 ]
 
 
@@ -124,13 +119,13 @@ def train():
 
 
 
-        train_loader = DataLoader(train_dataset, batch_size=6, num_workers=5, sampler=sampler)
-        val_loader = DataLoader(val_dataset, batch_size=6, shuffle=False, num_workers=5)
-        test_loader = DataLoader(test_dataset, batch_size=6, shuffle=False, num_workers=5)
+        train_loader = DataLoader(train_dataset, batch_size=8, num_workers=5, sampler=sampler)
+        val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False, num_workers=5)
+        test_loader = DataLoader(test_dataset, batch_size=8, shuffle=False, num_workers=5)
 
         torch.cuda.empty_cache()
         trainer = L.Trainer(
-        max_epochs=150,
+        max_epochs=250,
         accelerator="auto",
         logger=logger,
         devices=4,
@@ -186,4 +181,3 @@ def test(params):
     
 
 train()
-
