@@ -125,7 +125,7 @@ def train():
 
         torch.cuda.empty_cache()
         trainer = L.Trainer(
-        max_epochs=250,
+        max_epochs=200,
         accelerator="auto",
         logger=logger,
         devices=4,
