@@ -55,16 +55,28 @@ Params = namedtuple("Params", ["lr", "dropout", "attn_order", "optim_params", "w
 # precision affects
 # shuffle labels to see if truly memorizng
 #AJWIDNWEFNIEFNEOJFKEFMEMFE
-mods = ['DWI', 'SWI', 'T1c', 'brain_parenchyma_segmentation', 'tumor_segmentation', 'T2', 'ADC', 'ASL']
+mods = ['DWI', 'SWI', 'T1c', 'brain_parenchyma_segmentation', 'tumor_segmentation', 'T2', 'ADC', 'ASL', 'FLAIR']
+mods_o = ['DTI_eddy_L3', 'DTI_eddy_FA', 'DTI_eddy_L1', 'DTI_eddy_L2', 'DTI_eddy_MD', 'DWI_bias', 'SWI_bias', 'T1c_bias']
+# params_list = [
+#     # have to use str for attn_order otherwise config throws error when setting keys
+#     Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3', '3': '4', '4': '5'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7], mods[3], mods[4], mods[6]), label_smoothing=0.0),
+#     Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3', '3': '4', '4': '5'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7], mods[4], mods[6], mods[2]), label_smoothing=0.0),
+#     Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3', '3': '4'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7], mods[3], mods[4]), label_smoothing=0.0),
+#     Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7], mods[4]), label_smoothing=0.0),
+#     Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3', '3': '4', '4': '5', '5': '6'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7], mods[3], mods[4], mods[6], mods[2]), label_smoothing=0.0),
+#     Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3', '3': '4', '4': '5', '5': '6'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7], mods[4], mods[6], mods[5], mods[3]), label_smoothing=0.0),
+#     Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3', '3': '4', '4': '5', '5': '6', '6': '7'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7], mods[4], mods[6], mods[5], mods[3], mods[2]), label_smoothing=0.0),
+# ]
+
 params_list = [
     # have to use str for attn_order otherwise config throws error when setting keys
-    Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3', '3': '4', '4': '5'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7], mods[3], mods[4], mods[6]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3', '3': '4', '4': '5'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7], mods[4], mods[6], mods[2]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3', '3': '4'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7], mods[3], mods[4]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7], mods[4]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3', '3': '4', '4': '5', '5': '6'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7], mods[3], mods[4], mods[6], mods[2]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3', '3': '4', '4': '5', '5': '6'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7], mods[4], mods[6], mods[5], mods[3]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3', '3': '4', '4': '5', '5': '6', '6': '7'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7], mods[4], mods[6], mods[5], mods[3], mods[2]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '0'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods_o[0], mods_o[1], mods_o[2]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '0'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods_o[4], mods_o[0], mods_o[3]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '0'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods_o[2], mods_o[1], mods_o[4]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3', '3': '0'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods_o[0], mods_o[1], mods_o[2], mods_o[4]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3', '3': '0'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods_o[5], mods_o[6], mods[0], mods[1]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3', '3': '0'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7], mods[-1]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3', '3': '0'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods_o[0], mods_o[1]), label_smoothing=0.0),
 ]
 
 
