@@ -12,6 +12,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 import torch.nn as nn
 from collections import namedtuple
+from sklearn.model_selection import KFold
 from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 import os
 
@@ -57,94 +58,89 @@ Params = namedtuple("Params", ["lr", "dropout", "attn_order", "optim_params", "w
 #AJWIDNWEFNIEFNEOJFKEFMEMFE
 mods = ['DWI', 'SWI', 'T1c', 'brain_parenchyma_segmentation', 'tumor_segmentation', 'T2', 'ADC', 'ASL', 'FLAIR']
 mods_o = ['DTI_eddy_L3', 'DTI_eddy_FA', 'DTI_eddy_L1', 'DTI_eddy_L2', 'DTI_eddy_MD', 'DWI_bias', 'SWI_bias', 'T1c_bias']
-# params_list = [
-#     # have to use str for attn_order otherwise config throws error when setting keys
-#     Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3', '3': '4', '4': '5'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7], mods[3], mods[4], mods[6]), label_smoothing=0.0),
-#     Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3', '3': '4', '4': '5'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7], mods[4], mods[6], mods[2]), label_smoothing=0.0),
-#     Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3', '3': '4'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7], mods[3], mods[4]), label_smoothing=0.0),
-#     Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7], mods[4]), label_smoothing=0.0),
-#     Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3', '3': '4', '4': '5', '5': '6'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7], mods[3], mods[4], mods[6], mods[2]), label_smoothing=0.0),
-#     Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3', '3': '4', '4': '5', '5': '6'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7], mods[4], mods[6], mods[5], mods[3]), label_smoothing=0.0),
-#     Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3', '3': '4', '4': '5', '5': '6', '6': '7'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7], mods[4], mods[6], mods[5], mods[3], mods[2]), label_smoothing=0.0),
-# ]
-
 params_list = [
     # have to use str for attn_order otherwise config throws error when setting keys
-    Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '0'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods_o[0], mods_o[1], mods_o[2]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '0'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods_o[4], mods_o[0], mods_o[3]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '0'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods_o[2], mods_o[1], mods_o[4]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3', '3': '0'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods_o[0], mods_o[1], mods_o[2], mods_o[4]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3', '3': '0'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods_o[5], mods_o[6], mods[0], mods[1]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3', '3': '0'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7], mods[-1]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3', '3': '0'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods_o[0], mods_o[1]), label_smoothing=0.0),
-]
+    Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7], mods[4]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3', '3': '0'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7], mods[4]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.25, attn_order={'0': '1', '1': '2', '2': '0'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7]), label_smoothing=0.0),
+    ]
+
+# params_list = [
+#     # have to use str for attn_order otherwise config throws error when setting keys
+#     Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '0'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods_o[0], mods_o[1], mods_o[2]), label_smoothing=0.0),
+#     Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '0'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods_o[4], mods_o[0], mods_o[3]), label_smoothing=0.0),
+#     Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '0'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods_o[2], mods_o[1], mods_o[4]), label_smoothing=0.0),
+#     Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3', '3': '0'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods_o[0], mods_o[1], mods_o[2], mods_o[4]), label_smoothing=0.0),
+#     Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3', '3': '0'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods_o[5], mods_o[6], mods[0], mods[1]), label_smoothing=0.0),
+#     Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3', '3': '0'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7], mods[-1]), label_smoothing=0.0),
+#     Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3', '3': '0'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods_o[0], mods_o[1]), label_smoothing=0.0),
+# ]
 
 
 def train():
     config = get_mgmt_config()
+
     with open('run.txt', 'r') as f:
         run = int(f.read())
     with open('run.txt', 'w') as f:
         f.write(str(run + 1))
+        
+    data = pd.read_csv("labels.csv")
+    
+    data = clean_data(data, config.target)
+    
+    k = 5
+    kfold = KFold(n_splits=k, shuffle=True, random_state=3504)
     for i, params in enumerate(params_list):
-        checkpoint_callback = ModelCheckpoint(
+        
+        for fold, (train_idx, val_idx) in enumerate(kfold.split(data)):
+            
+            checkpoint_callback = ModelCheckpoint(
             dirpath=f"{file_path}/checkpoints/cross",           
             monitor="val_auc_roc",          
-            filename="{epoch:02d}-{val_auc_roc:.4f}" + f'_{run}_{i}', 
+            filename="{epoch:02d}-{val_auc_roc:.4f}" + f'_{run}_{i}_{fold}', 
             save_top_k=5,                   
             mode="max",                      
-        )
+            )
 
-        # fixed_epoch_checkpoint = ModelCheckpoint(
-        #     dirpath=f"{file_path}/checkpoints/cross",
-        #     filename="{epoch:02d}" + f'_{run}_{i}',
-        #     every_n_epochs=50,  # Save every 50 epochs
-        #     save_top_k=-1,  # Save all models at these epochs
-        # )
-        logger = TensorBoardLogger(save_dir=f"{file_path}/lightning_logs/cross", name=f"{run}_{i}")
 
-        config = modify_config(config, params)
-        config = modify_config(config, {'num_modalities': len(params.img_types)})
-        model = Model(config)
+       
+            logger = TensorBoardLogger(save_dir=f"{file_path}/lightning_logs/cross", name=f"{run}_{i}_{fold}")
+
+            config = modify_config(config, params)
+            config = modify_config(config, {'num_modalities': len(params.img_types)})
+            model = Model(config)
+            
+
+            train_df = data.iloc[train_idx]
+            val_df = data.iloc[val_idx]
+            sampler = create_sampler(train_df)
+
+
+
+            train_dataset = BrainDataset(config=config, data=train_df, is_train=True, types=params.img_types)
         
+            val_dataset = BrainDataset(config=config, data=val_df, is_train=False, types=params.img_types)
+
+           
 
 
 
-        data = pd.read_csv("labels.csv")
- 
-        data = clean_data(data, config.target)
-    
-        train_df, tmp_df = train_test_split(data, test_size=0.3, random_state=3504)
-        sampler = create_sampler(train_df)
-
-        
-
-        val_df, test_df = train_test_split(tmp_df, test_size=0.5, random_state=3504)
+            train_loader = DataLoader(train_dataset, batch_size=8, num_workers=5, sampler=sampler)
+            val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False, num_workers=5)
 
 
-        train_dataset = BrainDataset(config=config, data=train_df, is_train=True, types=params.img_types)
-    
-        val_dataset = BrainDataset(config=config, data=val_df, is_train=False, types=params.img_types)
-
-        test_dataset = BrainDataset(config=config, data=val_df, is_train=False, types=params.img_types)
-
-
-
-
-        train_loader = DataLoader(train_dataset, batch_size=8, num_workers=5, sampler=sampler)
-        val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False, num_workers=5)
-        test_loader = DataLoader(test_dataset, batch_size=8, shuffle=False, num_workers=5)
-
-        torch.cuda.empty_cache()
-        trainer = L.Trainer(
-        max_epochs=200,
-        accelerator="auto",
-        logger=logger,
-        devices=4,
-        num_nodes=2,
-        callbacks=[checkpoint_callback]
-        )
-        trainer.fit(model, train_loader, val_loader)
+            torch.cuda.empty_cache()
+            trainer = L.Trainer(
+            max_epochs=200,
+            accelerator="auto",
+            logger=logger,
+            devices=4,
+            num_nodes=2,
+            callbacks=[checkpoint_callback]
+            )
+            trainer.fit(model, train_loader, val_loader)
 
 
 def test(params):
