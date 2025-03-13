@@ -60,10 +60,10 @@ mods = ['DWI', 'SWI', 'T1c', 'brain_parenchyma_segmentation', 'tumor_segmentatio
 mods_o = ['DTI_eddy_L3', 'DTI_eddy_FA', 'DTI_eddy_L1', 'DTI_eddy_L2', 'DTI_eddy_MD', 'DWI_bias', 'SWI_bias', 'T1c_bias']
 params_list = [
     # have to use str for attn_order otherwise config throws error when setting keys
-    Params(lr=1e-4, dropout=0.25, attn_order={'0': '1', '1': '2', '2': '3'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=1e-3, img_types=(mods[0], mods[1], mods[7], mods[4]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.25, attn_order={'0': '1', '1': '2', '2': '3', '3': '0'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=1e-3, img_types=(mods[0], mods[1], mods[7], mods[4]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.25, attn_order={'0': '1', '1': '2', '2': '0'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=1e-3, img_types=(mods[0], mods[1], mods[7]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.25, attn_order={'0': '1', '1': '2'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=1e-3, img_types=(mods[0], mods[1], mods[7]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=1e-3, img_types=(mods[0], mods[1], mods[7], mods[4]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '0'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=1e-3, img_types=(mods[0], mods[1], mods[7]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=1e-3, img_types=(mods[0], mods[1], mods[7], mods[-1]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=1e-3, img_types=(mods[0], mods[1], mods[3], mods[4]), label_smoothing=0.0),
     ]
 
 # params_list = [
@@ -81,17 +81,14 @@ params_list = [
 def train():
     config = get_mgmt_config()
 
-    with open('run.txt', 'r') as f:
-        run = int(f.read())
-    with open('run.txt', 'w') as f:
-        f.write(str(run + 1))
+    run = 100
         
     data = pd.read_csv("labels.csv")
     
     data = clean_data(data, config.target)
     
     k = 5
-    kfold = KFold(n_splits=k, shuffle=True, random_state=1234)
+    kfold = KFold(n_splits=k, shuffle=True, random_state=9898)
     for i, params in enumerate(params_list):
         
         for fold, (train_idx, val_idx) in enumerate(kfold.split(data)):
@@ -105,7 +102,7 @@ def train():
             )
 
 
-       
+    
             logger = TensorBoardLogger(save_dir=f"{file_path}/lightning_logs/cross", name=f"{run}_{i}_{fold}")
 
             config = modify_config(config, params)
@@ -124,7 +121,7 @@ def train():
         
             val_dataset = BrainDataset(config=config, data=val_df, is_train=False, types=params.img_types)
 
-           
+        
 
 
 
