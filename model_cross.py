@@ -158,11 +158,11 @@ class Model(L.LightningModule):
         num_patches = (D // dp) * (H // hp) * (W // wp)
 
         patch_dim = dp * hp * wp
-
         self.patch_size = config.patch_size
         self.lr = config.lr
         self.weight_decay = config.weight_decay
         self.optim_params = config.optim_params
+        self.label_smoothing = config.label_smoothing
         self.num_modalities = config.num_modalities
         self.pos_embedding = nn.Parameter(torch.randn(1, num_patches + 1, config.hidden_dim))
         self.patch_to_embedding = nn.Linear(patch_dim, config.hidden_dim)
@@ -208,7 +208,7 @@ class Model(L.LightningModule):
         # x = weights.view(len(weights), 1, 1) * x
         # x = torch.sum(x, dim=0)
         x = torch.mean(x, dim=0)
-        loss = F.cross_entropy(x, labels)
+        loss = F.cross_entropy(x, labels, label_smoothing=self.label_smoothing)
         return x, loss
     
     @staticmethod

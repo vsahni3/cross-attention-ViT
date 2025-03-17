@@ -61,9 +61,9 @@ mods_o = ['DTI_eddy_L3', 'DTI_eddy_FA', 'DTI_eddy_L1', 'DTI_eddy_L2', 'DTI_eddy_
 params_list = [
     # have to use str for attn_order otherwise config throws error when setting keys
     Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '0'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7], mods[4]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.25, attn_order={'0': '1', '1': '2', '2': '0'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.25, attn_order={'0': '1', '1': '2', '2': '3'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7], mods[-1]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3', '3': '4'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7], mods[4], mods[3]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.25, attn_order={'0': '1', '1': '2', '2': '0'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7]), label_smoothing=0.1),
+    Params(lr=1e-4, dropout=0.25, attn_order={'0': '1', '1': '2', '2': '3'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7], mods[-1]), label_smoothing=0.1),
     ]
 
 
@@ -72,15 +72,15 @@ params_list = [
 def train():
     config = get_mgmt_config()
 
-    run = 105
+    run = 110
         
     data = pd.read_csv("labels.csv")
     
     data = clean_data(data, config.target)
-    data, test_df = train_test_split(data, test_size=0.15, random_state=369)
+    data, test_df = train_test_split(data, test_size=0.15, random_state=909)
     
     k = 5
-    kfold = KFold(n_splits=k, shuffle=True, random_state=4680)
+    kfold = KFold(n_splits=k, shuffle=True, random_state=909)
     for i, params in enumerate(params_list):
         
         for fold, (train_idx, val_idx) in enumerate(kfold.split(data)):
