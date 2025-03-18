@@ -12,7 +12,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 import torch.nn as nn
 from collections import namedtuple
-from sklearn.model_selection import KFold
+from sklearn.model_selection import KFold, StratifiedKFold
 from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 import os
 
@@ -61,8 +61,8 @@ mods_o = ['DTI_eddy_L3', 'DTI_eddy_FA', 'DTI_eddy_L1', 'DTI_eddy_L2', 'DTI_eddy_
 params_list = [
     # have to use str for attn_order otherwise config throws error when setting keys
     Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '0'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3', '3': '4'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7], mods[4], mods[3]), label_smoothing=0.0),
     Params(lr=1e-4, dropout=0.25, attn_order={'0': '1', '1': '2', '2': '0'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7]), label_smoothing=0.1),
+    Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '0'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7]), label_smoothing=0.1),
     Params(lr=1e-4, dropout=0.25, attn_order={'0': '1', '1': '2', '2': '3'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7], mods[-1]), label_smoothing=0.1),
     ]
 
@@ -72,18 +72,19 @@ params_list = [
 def train():
     config = get_mgmt_config()
 
-    run = 110
+    run = 115
         
     data = pd.read_csv("labels.csv")
     
     data = clean_data(data, config.target)
-    data, test_df = train_test_split(data, test_size=0.15, random_state=909)
+    data, test_df = train_test_split(data, test_size=0.15, random_state=777)
     
     k = 5
-    kfold = KFold(n_splits=k, shuffle=True, random_state=909)
+    kfold = StratifiedKFold(n_splits=k, shuffle=True, random_state=777)
+    # kfold = KFold(n_splits=k, shuffle=True, random_state=909)
     for i, params in enumerate(params_list):
-        
-        for fold, (train_idx, val_idx) in enumerate(kfold.split(data)):
+
+        for fold, (train_idx, val_idx) in enumerate(kfold.split(data, data[config.target])):
             
             checkpoint_callback = ModelCheckpoint(
             dirpath=f"{file_path}/checkpoints/cross",           
@@ -103,7 +104,9 @@ def train():
             
 
             train_df = data.iloc[train_idx]
+            # does poorly when balanced val
             val_df = data.iloc[val_idx]
+
 
             sampler = create_sampler(train_df)
 
