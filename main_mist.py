@@ -61,9 +61,7 @@ mods_o = ['DTI_eddy_L3', 'DTI_eddy_FA', 'DTI_eddy_L1', 'DTI_eddy_L2', 'DTI_eddy_
 params_list = [
     # have to use str for attn_order otherwise config throws error when setting keys
     Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '0'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.25, attn_order={'0': '1', '1': '2', '2': '0'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7]), label_smoothing=0.1),
-    Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '0'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7]), label_smoothing=0.1),
-    Params(lr=1e-4, dropout=0.25, attn_order={'0': '1', '1': '2', '2': '3'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7], mods[-1]), label_smoothing=0.1),
+    Params(lr=1e-4, dropout=0.15, attn_order={'0': '1', '1': '2', '2': '0'}, optim_params={"T_max": 200, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7]), label_smoothing=0.0),
     ]
 
 
@@ -72,68 +70,69 @@ params_list = [
 def train():
     config = get_mgmt_config()
 
-    run = 115
+    run = 120
         
     data = pd.read_csv("labels.csv")
     
     data = clean_data(data, config.target)
-    data, test_df = train_test_split(data, test_size=0.15, random_state=777)
-    
-    k = 5
-    kfold = StratifiedKFold(n_splits=k, shuffle=True, random_state=777)
-    # kfold = KFold(n_splits=k, shuffle=True, random_state=909)
-    for i, params in enumerate(params_list):
-
-        for fold, (train_idx, val_idx) in enumerate(kfold.split(data, data[config.target])):
-            
-            checkpoint_callback = ModelCheckpoint(
-            dirpath=f"{file_path}/checkpoints/cross",           
-            monitor="val_auc_roc",          
-            filename="{epoch:02d}-{val_auc_roc:.4f}" + f'_{run}_{i}_{fold}', 
-            save_top_k=5,                   
-            mode="max",                      
-            )
-            
-            
-            
-            logger = TensorBoardLogger(save_dir=f"{file_path}/lightning_logs/cross", name=f"{run}_{i}_{fold}")
-
-            config = modify_config(config, params)
-            config = modify_config(config, {'num_modalities': len(params.img_types)})
-            model = Model(config)
-            
-
-            train_df = data.iloc[train_idx]
-            # does poorly when balanced val
-            val_df = data.iloc[val_idx]
-
-
-            sampler = create_sampler(train_df)
-
-
-
-            train_dataset = BrainDataset(config=config, data=train_df, is_train=True, types=params.img_types)
+    for random_state in [1612, 9253]:
+        data, test_df = train_test_split(data, test_size=0.15, random_state=random_state)
         
-            val_dataset = BrainDataset(config=config, data=val_df, is_train=False, types=params.img_types)
+        k = 5
+        kfold = StratifiedKFold(n_splits=k, shuffle=True, random_state=random_state)
+        # kfold = KFold(n_splits=k, shuffle=True, random_state=909)
+        for i, params in enumerate(params_list):
 
-        
+            for fold, (train_idx, val_idx) in enumerate(kfold.split(data, data[config.target])):
+                
+                checkpoint_callback = ModelCheckpoint(
+                dirpath=f"{file_path}/checkpoints/cross",           
+                monitor="val_auc_roc",          
+                filename="{epoch:02d}-{val_auc_roc:.4f}" + f'_{run}_{i}_{fold}_{random_state}', 
+                save_top_k=5,                   
+                mode="max",                      
+                )
+                
+                
+                
+                logger = TensorBoardLogger(save_dir=f"{file_path}/lightning_logs/cross", name=f"{run}_{i}_{fold}_{random_state}")
+
+                config = modify_config(config, params)
+                config = modify_config(config, {'num_modalities': len(params.img_types)})
+                model = Model(config)
+                
+
+                train_df = data.iloc[train_idx]
+                # does poorly when balanced val
+                val_df = data.iloc[val_idx]
+
+
+                sampler = create_sampler(train_df)
 
 
 
-            train_loader = DataLoader(train_dataset, batch_size=8, num_workers=5, sampler=sampler)
-            val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False, num_workers=5)
+                train_dataset = BrainDataset(config=config, data=train_df, is_train=True, types=params.img_types)
+            
+                val_dataset = BrainDataset(config=config, data=val_df, is_train=False, types=params.img_types)
+
+            
 
 
-            torch.cuda.empty_cache()
-            trainer = L.Trainer(
-            max_epochs=250,
-            accelerator="auto",
-            logger=logger,
-            devices=4,
-            num_nodes=2,
-            callbacks=[checkpoint_callback]
-            )
-            trainer.fit(model, train_loader, val_loader)
+
+                train_loader = DataLoader(train_dataset, batch_size=8, num_workers=5, sampler=sampler)
+                val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False, num_workers=5)
+
+
+                torch.cuda.empty_cache()
+                trainer = L.Trainer(
+                max_epochs=250,
+                accelerator="auto",
+                logger=logger,
+                devices=4,
+                num_nodes=2,
+                callbacks=[checkpoint_callback]
+                )
+                trainer.fit(model, train_loader, val_loader)
 
 
 def test(params):
