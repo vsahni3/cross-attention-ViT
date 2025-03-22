@@ -61,7 +61,7 @@ mods_o = ['DTI_eddy_L3', 'DTI_eddy_FA', 'DTI_eddy_L1', 'DTI_eddy_L2', 'DTI_eddy_
 params_list = [
     # have to use str for attn_order otherwise config throws error when setting keys
     Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '0'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.15, attn_order={'0': '1', '1': '2', '2': '0'}, optim_params={"T_max": 200, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7]), label_smoothing=0.0),
+    Params(lr=1e-4, dropout=0.25, attn_order={'0': '1', '1': '2', '2': '0'}, optim_params={"T_max": 200, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7]), label_smoothing=0.0),
     ]
 
 
@@ -70,12 +70,12 @@ params_list = [
 def train():
     config = get_mgmt_config()
 
-    run = 120
+    run = 125
         
     data = pd.read_csv("labels.csv")
     
     data = clean_data(data, config.target)
-    for random_state in [1612, 9253]:
+    for random_state in [9000, 9253]:
         data, test_df = train_test_split(data, test_size=0.15, random_state=random_state)
         
         k = 5
