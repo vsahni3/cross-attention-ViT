@@ -5,6 +5,7 @@ import torch
 import lightning as L
 from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers.tensorboard import TensorBoardLogger
+from lightning.pytorch.loggers import CSVLogger
 from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 from torch.utils.data.distributed import DistributedSampler 
 from config2 import modify_config, get_mgmt_config
@@ -61,7 +62,6 @@ mods_o = ['DTI_eddy_L3', 'DTI_eddy_FA', 'DTI_eddy_L1', 'DTI_eddy_L2', 'DTI_eddy_
 params_list = [
     # have to use str for attn_order otherwise config throws error when setting keys
     Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '0'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7]), label_smoothing=0.0),
-    Params(lr=1e-4, dropout=0.25, attn_order={'0': '1', '1': '2', '2': '0'}, optim_params={"T_max": 200, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7]), label_smoothing=0.0),
     ]
 
 
@@ -70,12 +70,12 @@ params_list = [
 def train():
     config = get_mgmt_config()
 
-    run = 125
+    run = 135
         
     data = pd.read_csv("labels.csv")
     
     data = clean_data(data, config.target)
-    for random_state in [9000, 9253]:
+    for random_state in [8253, 6253, 7253, 9253]:
         data, test_df = train_test_split(data, test_size=0.15, random_state=random_state)
         
         k = 5
@@ -95,7 +95,8 @@ def train():
                 
                 
                 
-                logger = TensorBoardLogger(save_dir=f"{file_path}/lightning_logs/cross", name=f"{run}_{i}_{fold}_{random_state}")
+                lightning_logger = TensorBoardLogger(save_dir=f"{file_path}/lightning_logs/cross", name=f"{run}_{i}_{fold}_{random_state}")
+                csv_logger = CSVLogger(save_dir=f"{file_path}/csv_logs/cross", name=f"{run}_{i}_{fold}_{random_state}")
 
                 config = modify_config(config, params)
                 config = modify_config(config, {'num_modalities': len(params.img_types)})
@@ -127,7 +128,7 @@ def train():
                 trainer = L.Trainer(
                 max_epochs=250,
                 accelerator="auto",
-                logger=logger,
+                logger=[lightning_logger, csv_logger],
                 devices=4,
                 num_nodes=2,
                 callbacks=[checkpoint_callback]
