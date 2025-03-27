@@ -3,6 +3,11 @@ from torchmetrics.classification import (
 )
 from functools import reduce
 import torch
+
+import pandas as pd
+
+
+
 def accum_tensor(t1, t2, func, idx):
     if len(t1.shape) == 0:
         return func(t1.item(), t2.item())
@@ -60,3 +65,13 @@ def compute_metrics(preds, labels, device='cuda'):
         "f1_score": f1_score.item(),
         "npv": npv.item()  # Negative Predictive Value
     }
+    
+
+if __name__ == "__main__":
+    thresholds = {
+        'val_acc': 0.4,
+        'val_auc_roc': 0.5,
+        'val_rec': 0.5
+    }
+    filtered = filter_val_rows('your_file.csv', thresholds)
+    print(filtered)
