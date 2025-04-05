@@ -77,66 +77,66 @@ class BrainDataset(Dataset):
         self.types = types
         self.is_train = is_train
         self.folder = folder
+        
+        train_transforms = [
+            LoadImaged(keys=["image"], reader='nibabelreader'),
+            EnsureChannelFirstd(keys=["image"], channel_dim="no_channel"),
+            ResizeWithPadOrCropd(
+                keys=["image"],
+                spatial_size=config.img_size,
+                constant_values=-1,
+            ),
+        ]
 
-        self.train_transforms = Compose(
-                [
-                    LoadImaged(keys=["image"],reader='nibabelreader'),
-                    EnsureChannelFirstd(keys=["image"], channel_dim="no_channel"),
-                    # Orientationd(keys=["image"], axcodes="RAS"),
-                    # Spacingd(
-                    #     keys=["image"],
-                    #     pixdim=config.spacing,
-                    #     mode=("bilinear"),
-                    # ),
-                    # CropForegroundd(keys=["image"], source_key="image", allow_smaller=True),
-                    # ScaleIntensityd(keys=["image"], minv=-1.0, maxv=1.0),
-                    ResizeWithPadOrCropd(
-                          keys=["image"],
-                          spatial_size=config.img_size,
-                          constant_values = -1,
-                    ),
-                    
-                    #augmentations to prevent overfitting
-                    RandFlipd(keys=["image"], prob=0.5, spatial_axis=0),  # Horizontal Flip
-                    RandRotate90d(keys=["image"], prob=0.2, max_k=1),  # Slight 90-degree rotation
-                    RandAffined(keys=["image"], prob=0.2, rotate_range=(0.1, 0.1, 0.1), scale_range=(0.1, 0.1, 0.1)),  
+        # Conditionally add augmentations
+        if config.img_aug:
+            print('aug\n\n')
+            train_transforms += [
+                #augmentations to prevent overfitting
+                RandFlipd(keys=["image"], prob=0.5, spatial_axis=0),  # Horizontal Flip
+                RandRotate90d(keys=["image"], prob=0.2, max_k=1),  # Slight 90-degree rotation
+                RandAffined(keys=["image"], prob=0.2, rotate_range=(0.1, 0.1, 0.1), scale_range=(0.1, 0.1, 0.1)),  
 
-                    # Contrast and noise augmentations (Improve generalization)
-                    RandAdjustContrastd(keys=["image"], prob=0.3, gamma=(0.7, 1.3)),  # Contrast jittering
-                    RandGaussianNoised(keys=["image"], prob=0.2, mean=0, std=0.1),  # Add Gaussian noise
-                    RandGaussianSmoothd(keys=["image"], prob=0.2, sigma_x=(0.5, 1.5)),  # Blur for domain adaptation
+                # Contrast and noise augmentations (Improve generalization)
+                RandAdjustContrastd(keys=["image"], prob=0.3, gamma=(0.7, 1.3)),  # Contrast jittering
+                RandGaussianNoised(keys=["image"], prob=0.2, mean=0, std=0.1),  # Add Gaussian noise
+                RandGaussianSmoothd(keys=["image"], prob=0.2, sigma_x=(0.5, 1.5)),  # Blur for domain adaptation
 
-                    # CutMix-style augmentation (Random shuffle blocks, approximating CutMix)
-                    RandCoarseShuffled(keys=["image"], prob=0.2, holes=5, spatial_size=(20, 20, 20)),  
+                # CutMix-style augmentation (Random shuffle blocks, approximating CutMix)
+                RandCoarseShuffled(keys=["image"], prob=0.2, holes=5, spatial_size=(20, 20, 20)),  
 
-                    # Mixup Alternative: Coarse dropout (Mimics Mixup-like occlusions)
-                    RandCoarseDropoutd(keys=["image"], prob=0.2, holes=3, spatial_size=(15, 15, 15), fill_value=-1),
+                # Mixup Alternative: Coarse dropout (Mimics Mixup-like occlusions)
+                RandCoarseDropoutd(keys=["image"], prob=0.2, holes=3, spatial_size=(15, 15, 15), fill_value=-1),
 
-                    # Random zoom for scale invariance
-                    RandZoomd(keys=["image"], prob=0.2, min_zoom=0.9, max_zoom=1.1),
-                    
-                    ToTensord(keys=["image"]),
-                ]
-            )
+                # Random zoom for scale invariance
+                RandZoomd(keys=["image"], prob=0.2, min_zoom=0.9, max_zoom=1.1),
+            ]
+
+        # Always convert to tensor at the end
+        train_transforms.append(ToTensord(keys=["image"]))
+
+        # Compose the final transform pipeline
+        self.train_transforms = Compose(train_transforms)
+
         self.test_transforms = Compose(
-                [
-                    LoadImaged(keys=["image"],reader='nibabelreader'),
-                    EnsureChannelFirstd(keys=["image"], channel_dim="no_channel"),
-                    # Orientationd(keys=["image"], axcodes="RAS"),
-                    # Spacingd(
-                    #     keys=["image"],
-                    #     pixdim=config.spacing,
-                    #     mode=("bilinear"),
-                    # ),
-                    # CropForegroundd(keys=["image"], source_key="image", allow_smaller=True),
-                    # ScaleIntensityd(keys=["image"], minv=-1.0, maxv=1.0),
-                    ResizeWithPadOrCropd(
-                          keys=["image"],
-                          spatial_size=config.img_size,
-                          constant_values = -1,
-                    ),
-                    ToTensord(keys=["image"]),
-                ]
+            [
+                LoadImaged(keys=["image"],reader='nibabelreader'),
+                EnsureChannelFirstd(keys=["image"], channel_dim="no_channel"),
+                # Orientationd(keys=["image"], axcodes="RAS"),
+                # Spacingd(
+                #     keys=["image"],
+                #     pixdim=config.spacing,
+                #     mode=("bilinear"),
+                # ),
+                # CropForegroundd(keys=["image"], source_key="image", allow_smaller=True),
+                # ScaleIntensityd(keys=["image"], minv=-1.0, maxv=1.0),
+                ResizeWithPadOrCropd(
+                        keys=["image"],
+                        spatial_size=config.img_size,
+                        constant_values = -1,
+                ),
+                ToTensord(keys=["image"]),
+            ]
             ) 
     def __len__(self):
         return len(self.data)
