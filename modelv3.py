@@ -70,8 +70,8 @@ class Transformer(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.layers = nn.ModuleList([])
-            
-        drop_path_rates = torch.linspace(0, config.drop_path, config.num_layers).tolist()
+        # default to 0
+        drop_path_rates = torch.linspace(0, 0, config.num_layers).tolist()
         
         # if we use same droppath for both they share whether being dropped or not at same time
         for drop_path_rate in drop_path_rates:
@@ -87,7 +87,7 @@ class Transformer(nn.Module):
             x = drop_path_ff(ff(x)) + x
         return x
 
-class Model(L.LightningModule):
+class ModelVIT(L.LightningModule):
     def __init__(self, config):
         super().__init__()
         assert all(config.img_size[i] % config.patch_size[i] == 0 for i in range(len(config.img_size))), 'image dimensions must be divisible by the patch size'
@@ -167,7 +167,7 @@ class Model(L.LightningModule):
         the positional embeddings and class token.
         """
         # Initialize modules (Linear, LayerNorm, etc.)
-        self.apply(Model.init_weights)
+        self.apply(ModelVIT.init_weights)
         
         # Reinitialize parameters that were defined as nn.Parameter
         if hasattr(self, 'pos_embedding'):
@@ -187,6 +187,8 @@ class Model(L.LightningModule):
 
         prob = torch.nn.functional.softmax(logits, dim=1)[:, 1]
         auroc = torchmetrics.functional.auroc(prob, labels, task="binary")
+        if name == 'val' and self.current_epoch < 50:
+            auroc = 0
         self.log(f'{name}_auc_roc', auroc, on_epoch=True, on_step=False, sync_dist=True)
 
 
@@ -226,12 +228,21 @@ class Model(L.LightningModule):
             }
         }
         
+    def on_test_epoch_start(self):
+        self.test_logits = []
+        self.test_targets = []
+
     def test_step(self, batch, batch_idx):
         x, labels = batch
-        logits, loss = self(x, labels)
 
-        self.log('test_loss', loss, on_epoch=True, on_step=False)
-        self.log_stats('test', logits, labels)
+        logits, _ = self(x, labels)
+
+        self.test_logits.append(logits.cpu())
+        self.test_targets.append(labels.cpu())
+        
+    def on_test_epoch_end(self):
+        self.test_logits = torch.cat(self.test_logits)
+        self.test_targets = torch.cat(self.test_targets)
         
     # def configure_optimizers(self):
     #     optimizer = torch.optim.Adam(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
