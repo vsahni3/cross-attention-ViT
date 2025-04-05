@@ -2,11 +2,16 @@ import ml_collections
 
 def get_mgmt_config():
     config = ml_collections.ConfigDict()
-    config.hidden_dim = 256
-    config.mlp_dim = 1024
-    config.num_heads = 8
-    config.num_layers = 12
-    config.patch_size = (4, 4, 4)
+    config.hidden_dim = 1024
+    config.mlp_dim = 4096
+    config.num_heads = 16
+    # for vanilla vit
+    config.num_layers = 4
+    
+
+    # D W H?
+    config.patch_size = (16, 16, 8)
+
 
     config.conv_first_channel = 512
     config.encoder_channels = (16, 32, 64)
@@ -28,5 +33,4 @@ def modify_config(config, params):
         params = params._asdict()
     for key, value in params.items():
         setattr(config, key, value)
-    
     return config

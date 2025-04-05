@@ -5,8 +5,7 @@ def get_mgmt_config():
     config.hidden_dim = 1024
     config.mlp_dim = 4096
     config.num_heads = 16
-    # for vanilla vit
-    config.num_layers = 4
+
     
     config.num_multi_blocks = 2
     config.num_self_blocks = 2
