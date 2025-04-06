@@ -156,7 +156,7 @@ def train_full(params_big):
     big_data = pd.read_csv("labels.csv")
     
     test_seeds = [6253, 9253, 3504, 4053]
-    big_data = clean_data(data, "MGMT status")
+    big_data = clean_data(big_data, "MGMT status")
     
     for r in range(len(test_seeds)):
         data, test_df = train_test_split(big_data, test_size=0.15, random_state=test_seeds[r])
