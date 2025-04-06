@@ -82,7 +82,7 @@ def train_cv():
     models = [ModelCross, ModelVIT]
     configs = [config2, config]
         
-    data = pd.read_csv("labels.csv")
+    big_data = pd.read_csv("labels.csv")
     
     seeds1 = [6253, 9253]
     seeds_val = [[6253, 9253], [6253, 9253]]
@@ -149,13 +149,13 @@ def train_cv():
 
 
 def train_full(params_big):
-    run = 170
+    run = 175
     models = [ModelCross, ModelVIT]
     configs = [config2, config]
         
-    data = pd.read_csv("labels.csv")
+    big_data = pd.read_csv("labels.csv")
     
-    test_seeds = [1122, 2233, 3344, 4455]
+    test_seeds = [6253, 9253, 3504, 4053]
     big_data = clean_data(data, "MGMT status")
     
     for r in range(len(test_seeds)):
