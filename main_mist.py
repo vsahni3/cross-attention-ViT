@@ -67,6 +67,7 @@ mods_o = ['DTI_eddy_L3', 'DTI_eddy_FA', 'DTI_eddy_L1', 'DTI_eddy_L2', 'DTI_eddy_
 params_list1 = [
     # have to use str for attn_order otherwise config throws error when setting keys
     Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '0'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7]), label_smoothing=0.0, img_aug=True),
+    Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '0'}, optim_params={"T_max": 200, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7]), label_smoothing=0.0, img_aug=True),
     ]
 
 params_list2 = [
@@ -149,13 +150,13 @@ def train_cv():
 
 
 def train_full(params_big):
-    run = 175
+    run = 180
     models = [ModelCross, ModelVIT]
     configs = [config2, config]
         
     big_data = pd.read_csv("labels.csv")
     
-    test_seeds = [6253, 9253, 3504, 4053]
+    test_seeds = [9253, 2004, 1999, 1969]
     big_data = clean_data(big_data, "MGMT status")
     
     for r in range(len(test_seeds)):
