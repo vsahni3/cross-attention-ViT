@@ -72,6 +72,8 @@ params_list1 = [
 
 params_list2 = [
     Params(lr=1e-4, dropout=0.1, attn_order={}, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[1], mods[0]), label_smoothing=0.0, img_aug=False),
+    Params(lr=1e-4, dropout=0.1, attn_order={}, optim_params={"T_max": 150, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[1], mods[0]), label_smoothing=0.0, img_aug=True),
+    
 ]
 
 
@@ -150,13 +152,13 @@ def train_cv():
 
 
 def train_full(params_big):
-    run = 180
+    run = 185
     models = [ModelCross, ModelVIT]
     configs = [config2, config]
         
     big_data = pd.read_csv("labels.csv")
     
-    test_seeds = [9253, 2004, 1999, 1969]
+    test_seeds = [2004, 1969, 911, 100]
     big_data = clean_data(big_data, "MGMT status")
     
     for r in range(len(test_seeds)):
