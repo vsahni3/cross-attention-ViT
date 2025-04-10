@@ -17,11 +17,11 @@ import torch.nn as nn
 from collections import namedtuple
 from sklearn.model_selection import KFold, StratifiedKFold
 from lightning.pytorch.callbacks.early_stopping import EarlyStopping
-# import os
-# from utils import compute_metrics
-# import numpy as np
-# from scipy.stats import ttest_rel
-# import torchmetrics
+import os
+from utils import compute_metrics
+import numpy as np
+from scipy.stats import ttest_rel
+import torchmetrics
 
 
 # DIM / IMAGE SIZE ONLY 128 MAYBE UPSCALE IF NEEDED
@@ -62,12 +62,14 @@ Params = namedtuple("Params", ["lr", "dropout", "attn_order", "optim_params", "w
 # precision affects
 # shuffle labels to see if truly memorizng
 #AJWIDNWEFNIEFNEOJFKEFMEMFE
+
 mods = ['DWI', 'SWI', 'T1c', 'brain_parenchyma_segmentation', 'tumor_segmentation', 'T2', 'ADC', 'ASL', 'FLAIR']
 mods_o = ['DTI_eddy_L3', 'DTI_eddy_FA', 'DTI_eddy_L1', 'DTI_eddy_L2', 'DTI_eddy_MD', 'DWI_bias', 'SWI_bias', 'T1c_bias']
+
 params_list1 = [
     # have to use str for attn_order otherwise config throws error when setting keys
     Params(lr=1e-4, dropout=0.25, attn_order={'0': '1', '1': '2', '2': '0'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7]), label_smoothing=0.0, img_aug=True),
-    Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2', '2': '3'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7], mods[4]), label_smoothing=0.0, img_aug=True),
+    Params(lr=1e-4, dropout=0.2, attn_order={'0': '1', '1': '2'}, optim_params={"T_max": 250, "eta_min": 1e-6}, weight_decay=5e-4, img_types=(mods[0], mods[1], mods[7]), label_smoothing=0.0, img_aug=True),
     ]
 
 params_list2 = [
@@ -152,13 +154,13 @@ def train_cv():
 
 
 def train_full(params_big):
-    run = 190
+    run = 195
     models = [ModelCross, ModelVIT]
     configs = [config2, config]
         
     big_data = pd.read_csv("labels.csv")
     
-    test_seeds = [2004, 1111, 2222, 3333]
+    test_seeds = [2004, 1111, 4444, 7777]
     big_data = clean_data(big_data, "MGMT status")
     
     for r in range(len(test_seeds)):
@@ -216,5 +218,4 @@ def train_full(params_big):
                 )
                 trainer.fit(model, train_loader, val_loader)
                     
-train_full([params_list1, params_list2])
-# # use same seed as above                    
+
