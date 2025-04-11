@@ -17,11 +17,11 @@ import torch.nn as nn
 from collections import namedtuple
 from sklearn.model_selection import KFold, StratifiedKFold
 from lightning.pytorch.callbacks.early_stopping import EarlyStopping
-import os
-from utils import compute_metrics
-import numpy as np
-from scipy.stats import ttest_rel
-import torchmetrics
+# import os
+# from utils import compute_metrics
+# import numpy as np
+# from scipy.stats import ttest_rel
+# import torchmetrics
 
 
 # DIM / IMAGE SIZE ONLY 128 MAYBE UPSCALE IF NEEDED
