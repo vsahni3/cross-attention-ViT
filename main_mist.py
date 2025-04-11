@@ -219,3 +219,4 @@ def train_full(params_big):
                 trainer.fit(model, train_loader, val_loader)
                     
 
+train_full([params_list1, params_list2])
