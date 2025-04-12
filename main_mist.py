@@ -17,11 +17,11 @@ import torch.nn as nn
 from collections import namedtuple
 from sklearn.model_selection import KFold, StratifiedKFold
 from lightning.pytorch.callbacks.early_stopping import EarlyStopping
-# import os
-# from utils import compute_metrics
-# import numpy as np
-# from scipy.stats import ttest_rel
-# import torchmetrics
+import os
+from utils import compute_metrics
+import numpy as np
+from scipy.stats import ttest_rel
+import torchmetrics
 
 
 # DIM / IMAGE SIZE ONLY 128 MAYBE UPSCALE IF NEEDED
@@ -154,13 +154,13 @@ def train_cv():
 
 
 def train_full(params_big):
-    run = 195
+    run = 200
     models = [ModelCross, ModelVIT]
     configs = [config2, config]
         
     big_data = pd.read_csv("labels.csv")
     
-    test_seeds = [2004, 1111, 4444, 7777]
+    test_seeds = [2004, 4444, 9780, 7564]
     big_data = clean_data(big_data, "MGMT status")
     
     for r in range(len(test_seeds)):
@@ -173,10 +173,10 @@ def train_full(params_big):
             for i, params in enumerate(params_big[m]):
                 checkpoint_callback = ModelCheckpoint(
                     dirpath=f"{file_path}/checkpoints/cross",           
-                    monitor="val_auc_roc",          
-                    filename="{epoch:02d}-{val_auc_roc:.4f}" + f'test_{run}_{r}_{m}_{i}', 
-                    save_top_k=5,                   
-                    mode="max",                      
+                    monitor="val_loss",          
+                    filename="{epoch:02d}-{val_loss:.4f}" + f'test_{run}_{r}_{m}_{i}', 
+                    save_top_k=10,                   
+                    mode="min",                      
                 )
                 # .18 * .85 ~ 0.15
                 train_df, val_df = train_test_split(data, test_size=0.18, random_state=test_seeds[r])
@@ -220,3 +220,7 @@ def train_full(params_big):
                     
 
 train_full([params_list1, params_list2])
+
+
+    
+

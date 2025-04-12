@@ -187,8 +187,6 @@ class ModelVIT(L.LightningModule):
 
         prob = torch.nn.functional.softmax(logits, dim=1)[:, 1]
         auroc = torchmetrics.functional.auroc(prob, labels, task="binary")
-        if name == 'val' and self.current_epoch < 50:
-            auroc = 0
         self.log(f'{name}_auc_roc', auroc, on_epoch=True, on_step=False, sync_dist=True)
 
 
